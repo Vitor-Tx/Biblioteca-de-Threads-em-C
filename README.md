@@ -1,5 +1,5 @@
 # TrabalhodeSO
-Trabalho da diciplina Sistemas Operacionais do curso de Sistemas de Informação da UFU
+Trabalho da disciplina Sistemas Operacionais do curso de Sistemas de Informação da UFU
 
 As características da biblioteca FiberLib seguem:
 
