@@ -1,5 +1,4 @@
-typedef unsigned int fiber_t;
-
+typedef int fiber_t;
 
 /*
     fiber_create
