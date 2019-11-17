@@ -3,14 +3,13 @@ Trabalho da disciplina Sistemas Operacionais do curso de Sistemas de Informaçã
 
 As características da biblioteca FiberLib seguem:
 
- A FiberLib deve implementar toda a infraestrutura para a criação de threads no user-space, seguindo o
-modelo M:1, ou seja, M threads no user space mapeadas para uma thread no kernel space.
+> A FiberLib deve implementar toda a infraestrutura para a criação de threads no user-space, seguindo o modelo M:1, ou seja, M threads no user space mapeadas para uma thread no kernel space.
 
- A FiberLib deve implementar escalonamento preemptivo, baseado em time slice (algoritmo roundrobin).
+> A FiberLib deve implementar escalonamento preemptivo, baseado em time slice (algoritmo roundrobin).
 
- O código do alocador deve estar no formato de shared library no Linux.
+> O código do alocador deve estar no formato de shared library no Linux.
 
- Tal como a biblioteca pthread, a FiberLib deve oferecer a seguinte interface mínima:
+> Tal como a biblioteca pthread, a FiberLib deve oferecer a seguinte interface mínima:
 
 Arquivo <fiber.h> contendo todos símbolos necessários ao uso das rotinas da biblioteca.
 
@@ -30,3 +29,8 @@ Para implementar as rotinas supracitadas, bem como outras acessórias, será nec
 system calls, em especial: getcontext(), setcontext(), makecontext(), swapcontext(), sigaction() e
 setitimer(). Consulte o manual online do Linux (man pages), bem como fontes complementares, para o
 entendimento de cada uma dessas funções.
+
+## Links Úteis
+<ol>
+  <li>https://www.tutorialspoint.com/unix_system_calls/setcontext.htm</li>
+</ol>
