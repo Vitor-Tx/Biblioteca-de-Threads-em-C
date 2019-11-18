@@ -28,11 +28,15 @@ man pages).
 
 Para implementar as rotinas supracitadas, bem como outras acessórias, será necessário o uso de várias
 system calls, em especial: <strong>getcontext()</strong>, <strong>setcontext()</strong>, <strong>makecontext()</strong>, <strong>swapcontext()</strong>, <strong>sigaction()</strong> e
-<strong>setitimer()</strong>. Consulte o manual online do Linux (man pages), bem como fontes complementares, para o
+<strong>alarm()</strong>. Consulte o manual online do Linux (man pages), bem como fontes complementares, para o
 entendimento de cada uma dessas funções.
 
 ## Links Úteis
 <ul>
   <li><strong><span>Artigo sobre a implementação de fibers: </span></strong>https://www.evanjones.ca/software/threading.html</li>
-  <li><strong><span>Função setcontext(): </span></strong>https://www.tutorialspoint.com/unix_system_calls/setcontext.htm</li>
+  <li><strong><span>getcontext() e setcontext(): </span></strong>http://man7.org/linux/man-pages/man3/setcontext.3.html</li>
+  <li><strong><span>makecontext(): </span></strong>http://man7.org/linux/man-pages/man3/makecontext.3.html</li>
+  <li><strong><span>swapcontext(): </span></strong>http://man7.org/linux/man-pages/man3/swapcontext.3.html</li>
+  <li><strong><span>sigaction(): </span></strong>http://man7.org/linux/man-pages/man2/sigaction.2.html</li>
+  <li><strong><span>alarm(): </span></strong>http://man7.org/linux/man-pages/man2/alarm.2.html</li>
 </ul>
