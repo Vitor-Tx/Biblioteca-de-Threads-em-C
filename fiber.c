@@ -71,7 +71,7 @@ void pushFiber(fiber_struct * fiber) {
     start_routine.
 
 */
-int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
+int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
 
     // Variável que irá armazenar a nova fiber 
     ucontext_t fiber;
@@ -97,7 +97,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
 
     // Inicializando a struct que armazena a fiber recem criada
     f_struct->context = &fiber;
-    f_struct->fiberId = fiber;
+    f_struct->fiberId = fiberId;
     f_struct->prev = NULL;
     f_struct->next = NULL;
     f_struct->fiber_list = NULL;
