@@ -18,10 +18,10 @@ typedef int fiber_t; // tipo para ID de fibers
     Struct de uma fiber
 */
 typedef struct {
-    fiber_t * next;
-    fiber_t * prev;
-    fiber_t * fiber_list;
-    ucontext_t context;
+    struct fiber_struct * next;
+    struct fiber_struct * prev;
+    struct fiber_list * fiber_list;
+    ucontext_t * context;
     fiber_t fiberId;
 }fiber_struct;
 
@@ -29,37 +29,49 @@ typedef struct {
     Struct da lista que armazenará as fibers criadas pela biblioteca
 */
 typedef struct {
-    fiber_struct * fibers;
+    struct fiber_struct * fibers;
+    ucontext_t * parent;
 }fiber_list;
 
 // Lista global que armazenará as fibers
-fiber_list f_list;
+fiber_list * f_list;
 
 /*
     Insere uma fiber na última posição da lista de fibers
 */
 void pushFiber(fiber_struct * fiber) {
     // Caso não haja nenhuma fiber na lista
-    if (f_list.fibers = NULL) {
-        f_list.fibers = fiber;
+    if (f_list->fibers = NULL) {
+        // Variável utilizada para armazenar o contexto do processo pai
+        ucontext_t parent;
 
+        // Adicionando a fiber recem criada na lista de fibers
+        f_list->fibers = (struct fiber_struct *) fiber;
+
+        // Inserindo a fiber como primeiro elemento da lista
         fiber->prev = NULL;
         fiber->next = NULL;
-        fiber->fiber_list = &f_list;
+        fiber->fiber_list = (struct fiber_list *) f_list;
+
+        // Obtendo o contexto do processo pai
+        getcontext(&parent);
+
+        f_list->parent = &parent;
+
     } else { // Caso contrário
-        fiber_struct * f_aux1 = f_list->fibers;
-        fiber_t * f_aux2 = f_aux1->next;
+        fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
+        fiber_struct * f_aux2 = (fiber_struct *) f_aux1->next;
 
         // Procurando o último elemento da lista de fibers
         while (f_aux2 != NULL) {
-            f_aux2 = f_aux2->next;
+            f_aux2 = (fiber_struct *) f_aux2->next;
         }
 
         // Inserindo a nova fiber no fim da lista
-        f_aux2->next = fiber;
-        fiber->prev = f_aux2;
+        f_aux2->next = (struct fiber_struct *) fiber;
+        fiber->prev = (struct fiber_struct *) f_aux2;
         fiber->next = NULL;
-        fiber->fiber_list = &f_list;
+        fiber->fiber_list = (struct fiber_list *) f_list;
     }
 }
 
