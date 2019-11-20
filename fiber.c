@@ -22,7 +22,7 @@ typedef struct {
     struct fiber_struct * prev;
     struct fiber_list * fiber_list;
     ucontext_t * context;
-    fiber_t fiberId;
+    fiber_t * fiberId;
 }fiber_struct;
 
 /*
@@ -88,13 +88,16 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
     ucontext_t fiber;
 
+    // Convertendo arg de volta para int
+    int arg_aux = *((int *) arg);
+
     // Struct que irá armazenar a nova fiber
     fiber_struct * f_struct;
 
     // Obtendo o contexto atual e armazenando-o na variável fiber
     getcontext(&fiber);
 
-    // Modificando o contexto para um nova pilha
+    // Modificando o contexto para uma nova pilha
     fiber.uc_link = 0;
     fiber.uc_stack.ss_sp = malloc( FIBER_STACK );
     fiber.uc_stack.ss_size = FIBER_STACK;
@@ -105,7 +108,7 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     }
 
     // Criando a fiber propriamente dita
-    makecontext(&fiber, start_routine, arg);
+    makecontext(&fiber, start_routine, arg_aux);
 
     // Inicializando a struct que armazena a fiber recem criada
     f_struct->context = &fiber;
