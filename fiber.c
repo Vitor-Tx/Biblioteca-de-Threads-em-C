@@ -88,8 +88,12 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
     ucontext_t fiber;
 
-    // Convertendo arg de volta para int
+    // Convertendo arg para int
     int arg_aux = *((int *) arg);
+
+    // Convertento a função passada para um tipo aceito
+    // pela system_call makecontext()
+    void (*routine_aux)(void) = (void (*)(void )) start_routine; 
 
     // Struct que irá armazenar a nova fiber
     fiber_struct * f_struct;
@@ -108,7 +112,7 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     }
 
     // Criando a fiber propriamente dita
-    makecontext(&fiber, start_routine, arg_aux);
+    makecontext(&fiber, routine_aux, arg_aux);
 
     // Inicializando a struct que armazena a fiber recem criada
     f_struct->context = &fiber;
