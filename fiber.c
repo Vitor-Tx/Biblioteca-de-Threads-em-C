@@ -34,16 +34,31 @@ typedef struct {
 }fiber_list;
 
 // Lista global que armazenará as fibers
-fiber_list * f_list = (fiber_list*) malloc(sizeof(fiber_list));
-f_list->fibers = (fiber_struct*) malloc(sizeof(fiber_struct));
-f_list->parent = (ucontext_t*) malloc(sizeof(ucontext_t));
+fiber_list * f_list = NULL;
+
+void fiberSwap(fiber_t * fiberId) {
+    fiber_struct * fiber = (fiber_struct *) f_list->fibers;
+
+    while (fiber->fiberId != fiberId) {
+        fiber = (fiber_struct *) fiber->next;
+    }
+
+    swapcontext(f_list->parent, fiber->context);
+}
 
 /*
     Insere uma fiber na última posição da lista de fibers
 */
 void pushFiber(fiber_struct * fiber) {
+    // Inicializando a f_list caso ela não tenha cido inicializada
+    if (f_list == NULL) {
+        f_list = (fiber_list*) malloc(sizeof(fiber_list));
+        f_list->fibers = NULL;
+        f_list->parent = NULL;
+    }
+    
     // Caso não haja nenhuma fiber na lista
-    if (f_list->fibers = NULL) {
+    if (f_list->fibers == NULL) {
         // Variável utilizada para armazenar o contexto do processo pai
         ucontext_t parent;
 
@@ -62,16 +77,16 @@ void pushFiber(fiber_struct * fiber) {
 
     } else { // Caso contrário
         fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
-        fiber_struct * f_aux2 = (fiber_struct *) f_aux1->next;
+        //fiber_struct * f_aux2 = (fiber_struct *) f_aux1->next;
 
         // Procurando o último elemento da lista de fibers
-        while (f_aux2 != NULL) {
-            f_aux2 = (fiber_struct *) f_aux2->next;
+        while (f_aux1->next != NULL) {
+            f_aux1 = (fiber_struct *) f_aux1->next;
         }
 
         // Inserindo a nova fiber no fim da lista
-        f_aux2->next = (struct fiber_struct *) fiber;
-        fiber->prev = (struct fiber_struct *) f_aux2;
+        f_aux1->next = (struct fiber_struct *) fiber;
+        fiber->prev = (struct fiber_struct *) f_aux1;
         fiber->next = NULL;
         fiber->fiber_list = (struct fiber_list *) f_list;
     }
@@ -89,15 +104,12 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
     ucontext_t fiber;
 
-    // Convertendo arg para int
-    int arg_aux = *((int *) arg);
-
     // Convertento a função passada para um tipo aceito
     // pela system_call makecontext()
     void (*routine_aux)(void) = (void (*)(void )) start_routine; 
 
     // Struct que irá armazenar a nova fiber
-    fiber_struct * f_struct;
+    fiber_struct * f_struct = (fiber_struct *) malloc(sizeof(fiber_struct));
     
     // Obtendo o contexto atual e armazenando-o na variável fiber
     getcontext(&fiber);
@@ -108,12 +120,12 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     fiber.uc_stack.ss_size = FIBER_STACK;
     fiber.uc_stack.ss_flags = 0;        
     if (fiber.uc_stack.ss_sp == 0 ) {
-        perror("malloc: Não foi possível alocar a pilha");
-        exit(1);
+        printf("malloc: Não foi possível alocar a pilha");
+        return 1;
     }
 
     // Criando a fiber propriamente dita
-    makecontext(&fiber, routine_aux, arg_aux);
+    makecontext(&fiber, routine_aux, (int) arg);
 
     // Inicializando a struct que armazena a fiber recem criada
     f_struct->context = &fiber;
@@ -124,6 +136,8 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
 
     // Inserindo a nova fiber na lista de fibers
     pushFiber(f_struct);
+
+    return 0;
 }
 
 /*

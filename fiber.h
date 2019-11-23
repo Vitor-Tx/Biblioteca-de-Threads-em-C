@@ -1,5 +1,7 @@
 typedef int fiber_t;
 
+void fiberSwap(fiber_t * fiberId);
+
 /*
     fiber_create
     ------------
