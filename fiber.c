@@ -35,6 +35,8 @@ typedef struct {
 
 // Lista global que armazenará as fibers
 fiber_list * f_list = (fiber_list*) malloc(sizeof(fiber_list));
+f_list->fibers = (fiber_struct*) malloc(sizeof(fiber_struct));
+f_list->parent = (ucontext_t*) malloc(sizeof(ucontext_t));
 
 /*
     Insere uma fiber na última posição da lista de fibers
