@@ -34,7 +34,7 @@ typedef struct {
 }fiber_list;
 
 // Lista global que armazenará as fibers
-fiber_list * f_list;
+fiber_list * f_list = (fiber_list*) malloc(sizeof(fiber_list));
 
 /*
     Insere uma fiber na última posição da lista de fibers
@@ -84,7 +84,6 @@ void pushFiber(fiber_struct * fiber) {
 
 */
 int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
-
     // Variável que irá armazenar a nova fiber 
     ucontext_t fiber;
 
@@ -97,7 +96,7 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
 
     // Struct que irá armazenar a nova fiber
     fiber_struct * f_struct;
-
+    
     // Obtendo o contexto atual e armazenando-o na variável fiber
     getcontext(&fiber);
 
