@@ -102,7 +102,7 @@ void pushFiber(fiber_struct * fiber) {
 */
 int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
-    ucontext_t fiber;
+    ucontext_t * fiber = (ucontext_t *) malloc(sizeof(ucontext_t));
 
     // Convertento a função passada para um tipo aceito
     // pela system_call makecontext()
@@ -112,23 +112,23 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     fiber_struct * f_struct = (fiber_struct *) malloc(sizeof(fiber_struct));
     
     // Obtendo o contexto atual e armazenando-o na variável fiber
-    getcontext(&fiber);
+    getcontext(fiber);
 
     // Modificando o contexto para uma nova pilha
-    fiber.uc_link = 0;
-    fiber.uc_stack.ss_sp = malloc( FIBER_STACK );
-    fiber.uc_stack.ss_size = FIBER_STACK;
-    fiber.uc_stack.ss_flags = 0;        
-    if (fiber.uc_stack.ss_sp == 0 ) {
+    fiber->uc_link = 0;
+    fiber->uc_stack.ss_sp = malloc(FIBER_STACK);
+    fiber->uc_stack.ss_size = FIBER_STACK;
+    fiber->uc_stack.ss_flags = 0;        
+    if (fiber->uc_stack.ss_sp == 0 ) {
         printf("malloc: Não foi possível alocar a pilha");
         return 1;
     }
 
     // Criando a fiber propriamente dita
-    makecontext(&fiber, routine_aux, (int) arg);
+    makecontext(fiber, routine_aux, 1, arg);
 
     // Inicializando a struct que armazena a fiber recem criada
-    f_struct->context = &fiber;
+    f_struct->context = fiber;
     f_struct->fiberId = fiberId;
     f_struct->prev = NULL;
     f_struct->next = NULL;
