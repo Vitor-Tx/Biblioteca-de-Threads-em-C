@@ -6,6 +6,7 @@
 
 fiber_t fibers[NUM_FIBER];
 ucontext_t parent, child;
+int finish = 0;
 
 void *threadFunction1(void * a) {
     printf("thread1\n");
@@ -27,19 +28,27 @@ void *threadFunction3(void * c) {
 
 void *threadFunction4(void * c) {
     printf( "thread4\n" );
+
+    finish = 1;
+
+    swapcontext(&child, &parent);
 }
 
 int main () {
-    void * arg = NULL;
+    getcontext(&parent);
 
-    fiber_create(&fibers[0], threadFunction1, arg);
-    fiber_create(&fibers[1], threadFunction2, arg);
-    fiber_create(&fibers[2], threadFunction3, arg);
-    fiber_create(&fibers[3], threadFunction4, arg);
+    if (finish == 0) {
+        void * arg = NULL;
 
-    fiberSwap(&fibers[0]);
+        fiber_create(&fibers[0], threadFunction1, arg);
+        fiber_create(&fibers[1], threadFunction2, arg);
+        fiber_create(&fibers[2], threadFunction3, arg);
+        fiber_create(&fibers[3], threadFunction4, arg);
 
-    printf("Processo completo");
+        fiberSwap(&fibers[0]);
+    } else {
+        printf("Processo completo\n");
+    }
 
     return 0;
 }
