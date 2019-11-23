@@ -37,9 +37,10 @@ typedef struct {
 fiber_list * f_list = NULL;
 
 void fiberSwap(fiber_t * fiberId) {
+    if(fiberId == NULL) return;
     fiber_struct * fiber = (fiber_struct *) f_list->fibers;
 
-    while (fiber->fiberId != fiberId) {
+    while (fiber != NULL && fiber->fiberId != fiberId) {
         fiber = (fiber_struct *) fiber->next;
     }
 
