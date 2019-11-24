@@ -39,4 +39,7 @@ entendimento de cada uma dessas funções.
   <li><strong><span>swapcontext(): </span></strong>http://man7.org/linux/man-pages/man3/swapcontext.3.html</li>
   <li><strong><span>sigaction(): </span></strong>http://man7.org/linux/man-pages/man2/sigaction.2.html</li>
   <li><strong><span>alarm(): </span></strong>http://man7.org/linux/man-pages/man2/alarm.2.html</li>
+  <li><strong><span>setitimer(): </span></strong>https://www.unix.com/man-page/linux/2/setitimer/</li>
+  <li><strong><span>sigprocmask() (relacionada ao atributo uc_sigmask da estrutura ucontext_t ao chamar makecontext()): </span></strong>http://man7.org/linux/man-pages/man2/sigprocmask.2.html</li>
+  <li><strong><span>sigaltstack() (relacionada ao atributo uc_stack da estrutura ucontext_t ao chamar makecontext()): </span></strong>http://man7.org/linux/man-pages/man2/sigaltstack.2.html</li>
 </ul>
