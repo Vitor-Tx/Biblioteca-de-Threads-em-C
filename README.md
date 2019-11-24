@@ -39,4 +39,5 @@ entendimento de cada uma dessas funções.
   <li><strong><span>swapcontext(): </span></strong>http://man7.org/linux/man-pages/man3/swapcontext.3.html</li>
   <li><strong><span>sigaction(): </span></strong>http://man7.org/linux/man-pages/man2/sigaction.2.html</li>
   <li><strong><span>alarm(): </span></strong>http://man7.org/linux/man-pages/man2/alarm.2.html</li>
+  <li><strong><span>sigaction(): </span></strong>https://www.unix.com/man-page/linux/2/sigaction/</li>
 </ul>
