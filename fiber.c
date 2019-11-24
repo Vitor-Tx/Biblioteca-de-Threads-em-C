@@ -47,15 +47,21 @@ fiber_list * f_list = NULL;
 */
 int fiberSwap(fiber_t * fiberId) {
     if(fiberId == NULL) return 1;
+    
+    // Obtendo a primeira fiber da lista de fibers
     fiber_struct * fiber = (fiber_struct *) f_list->fibers;
 
+    // Procurando a fiber que possui o id fornecido
     while (fiber != NULL && fiber->fiberId != fiberId) {
         fiber = (fiber_struct *) fiber->next;
     }
 
+    // Caso a fiber não tenha sido econtrada
     if(fiber == NULL) return 2;
 
-    swapcontext(f_list->parent, fiber->context);
+    // Setando o contexto da fiber encontrada
+    setcontext(fiber->context);
+
     return 0;
 }
 

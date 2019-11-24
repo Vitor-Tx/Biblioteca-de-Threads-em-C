@@ -31,7 +31,7 @@ void *threadFunction4(void * c) {
 
     finish = 1;
 
-    swapcontext(&child, &parent);
+    setcontext(&parent);
 }
 
 int main () {
