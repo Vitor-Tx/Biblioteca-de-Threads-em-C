@@ -36,22 +36,34 @@ typedef struct {
 // Lista global que armazenará as fibers
 fiber_list * f_list = NULL;
 
-void fiberSwap(fiber_t * fiberId) {
-    if(fiberId == NULL) return;
+/*
+    fiberSwap
+    ---------
+
+    Função que troca o contexto da thread atual com o contexto da thread selecionada
+
+    retorna 0 se der tudo certo, e retorna um inteiro maior que 0 caso ocorra algum erro.
+
+*/
+int fiberSwap(fiber_t * fiberId) {
+    if(fiberId == NULL) return 1;
     fiber_struct * fiber = (fiber_struct *) f_list->fibers;
 
     while (fiber != NULL && fiber->fiberId != fiberId) {
         fiber = (fiber_struct *) fiber->next;
     }
 
+    if(fiber == NULL) return 2;
+
     swapcontext(f_list->parent, fiber->context);
+    return 0;
 }
 
 /*
     Insere uma fiber na última posição da lista de fibers
 */
 void pushFiber(fiber_struct * fiber) {
-    // Inicializando a f_list caso ela não tenha cido inicializada
+    // Inicializando a f_list caso ela não tenha sido inicializada
     if (f_list == NULL) {
         f_list = (fiber_list*) malloc(sizeof(fiber_list));
         f_list->fibers = NULL;
@@ -76,7 +88,8 @@ void pushFiber(fiber_struct * fiber) {
 
         f_list->parent = &parent;
 
-    } else { // Caso contrário
+    } 
+    else { // Caso haja uma ou mais fibers na lista
         fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
         //fiber_struct * f_aux2 = (fiber_struct *) f_aux1->next;
 
@@ -126,7 +139,7 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     }
 
     // Criando a fiber propriamente dita
-    makecontext(fiber, routine_aux, 1, arg);
+    makecontext(fiber, (void (*)(void )) start_routine, 1, arg);
 
     // Inicializando a struct que armazena a fiber recem criada
     f_struct->context = fiber;
