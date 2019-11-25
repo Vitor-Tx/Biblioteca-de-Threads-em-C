@@ -30,7 +30,6 @@ typedef struct {
 */
 typedef struct {
     struct fiber_struct * fibers;
-    ucontext_t * parent;
 }fiber_list;
 
 // Lista global que armazenará as fibers
@@ -79,25 +78,30 @@ void pushFiber(fiber_struct * fiber) {
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
         // Variável utilizada para armazenar o contexto do processo pai
-        ucontext_t parent;
-
-        // Adicionando a fiber recem criada na lista de fibers
-        f_list->fibers = (struct fiber_struct *) fiber;
-
-        // Inserindo a fiber como primeiro elemento da lista
-        fiber->prev = NULL;
-        fiber->next = NULL;
-        fiber->fiber_list = (struct fiber_list *) f_list;
+        ucontext_t parentContext;
 
         // Obtendo o contexto do processo pai
-        getcontext(&parent);
+        getcontext(&parentContext);
 
-        f_list->parent = &parent;
+        // Criando a fiber do processo pai
+        fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
 
-    } 
-    else { // Caso haja uma ou mais fibers na lista
+        // Inicializando a fiber do processo pai
+        parentFiber->context = &parentContext;
+        parentFiber->fiberId = NULL;
+        parentFiber->prev = NULL;
+        parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
+        parentFiber->fiber_list = (struct fiber_list *) f_list;
+
+        // Adicionado a fiber do processo pai como o primeiro elemento da lista
+        f_list->fibers = (struct fiber_struct *) parentFiber; 
+
+        // Inserindo a fiber como segundo elemento da lista
+        fiber->prev = (struct fiber_struct *) parentFiber;
+        fiber->next = NULL;
+        fiber->fiber_list = (struct fiber_list *) f_list;
+    } else { // Caso haja uma ou mais fibers na lista
         fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
-        //fiber_struct * f_aux2 = (fiber_struct *) f_aux1->next;
 
         // Procurando o último elemento da lista de fibers
         while (f_aux1->next != NULL) {
