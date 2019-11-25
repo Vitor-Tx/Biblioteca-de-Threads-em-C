@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <signal.h>
+#include <string.h>
 
 /*  
     Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level 
@@ -38,8 +41,8 @@ typedef struct{
 // Lista global que armazenará as fibers
 fiber_list * f_list = NULL;
 
-int getnFibers() {
-    return f_list->nFibers;
+void getnFibers() {
+    printf("%d\n", f_list->nFibers);
 }
 
 void fiberScheduler() {
@@ -47,11 +50,36 @@ void fiberScheduler() {
     fiber_struct * proximaFiber = (fiber_struct *) fiberAtual->next;
 
     if (proximaFiber->fiberId != NULL) {
-        setcontext(fiberAtual->context);
+        f_list->fiberAtual = (struct fiber_struct *) proximaFiber;
+        setcontext(proximaFiber->context);
     } else {
         proximaFiber = (fiber_struct *) proximaFiber->next;
-        setcontext(fiberAtual->context);
+        f_list->fiberAtual = (struct fiber_struct *) proximaFiber;
+        setcontext(proximaFiber->context);
     }
+}
+
+void startFibers() {
+    struct sigaction sa;
+    struct itimerval timer;
+
+    fiber_struct * aux = (fiber_struct *) f_list->fibers;
+    aux = (fiber_struct *) aux->next;
+    f_list->fiberAtual = (struct fiber_struct *) aux;
+
+    memset (&sa, 0, sizeof (sa));
+    sa.sa_handler = &fiberScheduler;
+    sigaction (SIGVTALRM, &sa, NULL);
+ 
+    timer.it_value.tv_sec = 2;
+    timer.it_value.tv_usec = 0;
+ 
+    timer.it_interval.tv_sec = 2;
+    timer.it_interval.tv_usec = 0;
+
+    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+
+    setcontext(aux->context);
 }
 
 /*
@@ -88,6 +116,7 @@ int initFibers() {
         f_list = (fiber_list*) malloc(sizeof(fiber_list));
         f_list->fibers = NULL;
         f_list->nFibers = 0;
+        f_list->fiberAtual = NULL;
     }
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
@@ -153,9 +182,11 @@ void pushFiber(fiber_struct * fiber) {
         // fiber->prev = (struct fiber_struct *) parentFiber;
         // fiber->next = NULL;
         // fiber->fiber_list = (struct fiber_list *) f_list;
-    } 
+    //} 
     // else { // Caso haja uma ou mais fibers na lista
         fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
+
+        f_aux1->prev = (struct fiber_struct *) fiber;
 
         // Procurando o último elemento da lista de fibers
         for (int x = 1; x < f_list->nFibers; x++) {
