@@ -36,42 +36,6 @@ typedef struct{
 // Lista global que armazenará as fibers
 fiber_list * f_list = NULL;
 
-
-int fiberSchedule(){
-
-}
-
-int initFibers(){
-
-    if (f_list == NULL) {
-        f_list = (fiber_list*) malloc(sizeof(fiber_list));
-        f_list->fibers = NULL;
-    }
-    // Caso não haja nenhuma fiber na lista
-    if (f_list->fibers == NULL) {
-        // Variável utilizada para armazenar o contexto do processo pai
-        ucontext_t parentContext;
-
-        // Obtendo o contexto do processo pai
-        getcontext(&parentContext);
-
-        // Criando a fiber do processo pai
-        fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
-
-        // Inicializando a fiber do processo pai
-        parentFiber->context = &parentContext;
-        parentFiber->fiberId = NULL;
-        parentFiber->prev = NULL;
-        parentFiber->next = NULL; // Fiber recém criada
-        parentFiber->fiber_list = (struct fiber_list *) f_list;
-
-        // Adicionado a fiber do processo pai como o primeiro elemento da lista
-        f_list->fibers = (struct fiber_struct *) parentFiber; 
-    } 
-
-
-}
-
 /*
     fiberSwap
     ---------
@@ -101,16 +65,11 @@ int fiberSwap(fiber_t * fiberId) {
     return 0;
 }
 
-/*
-    Insere uma fiber na última posição da lista de fibers
-*/
-void pushFiber(fiber_struct * fiber) {
-    // Inicializando a f_list caso ela não tenha sido inicializada
+int initFibers() {
     if (f_list == NULL) {
         f_list = (fiber_list*) malloc(sizeof(fiber_list));
         f_list->fibers = NULL;
     }
-    
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
         // Variável utilizada para armazenar o contexto do processo pai
@@ -126,11 +85,48 @@ void pushFiber(fiber_struct * fiber) {
         parentFiber->context = &parentContext;
         parentFiber->fiberId = NULL;
         parentFiber->prev = NULL;
-        parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
+        parentFiber->next = NULL; 
         parentFiber->fiber_list = (struct fiber_list *) f_list;
 
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
         f_list->fibers = (struct fiber_struct *) parentFiber; 
+    }
+}
+
+/*
+    Insere uma fiber na última posição da lista de fibers
+*/
+void pushFiber(fiber_struct * fiber) {
+    // Inicializando a f_list caso ela não tenha sido inicializada
+    // if (f_list == NULL) {
+    //     f_list = (fiber_list*) malloc(sizeof(fiber_list));
+    //     f_list->fibers = NULL;
+    // }
+    initFibers();
+    
+    // Caso não haja nenhuma fiber na lista
+    if (f_list->fibers == NULL) {
+        // Variável utilizada para armazenar o contexto do processo pai
+        //ucontext_t parentContext;
+
+        // Obtendo o contexto do processo pai
+        //getcontext(&parentContext);
+        
+        // Criando a fiber do processo pai
+        //fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
+
+        // Inicializando a fiber do processo pai
+        // parentFiber->context = &parentContext;
+        // parentFiber->fiberId = NULL;
+        // parentFiber->prev = NULL;
+        // parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
+        // parentFiber->fiber_list = (struct fiber_list *) f_list;
+
+        // Adicionado a fiber do processo pai como o primeiro elemento da lista
+        // f_list->fibers = (struct fiber_struct *) parentFiber; 
+
+        fiber_struct * parentFiber = (fiber_struct *) f_list->fibers;
+        parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
 
         // Inserindo a fiber como segundo elemento da lista
         fiber->prev = (struct fiber_struct *) parentFiber;
