@@ -31,10 +31,28 @@ typedef struct{
 */
 typedef struct{
     struct fiber_struct * fibers;
+    struct fiber_struct * fiberAtual;
+    int nFibers;
 }fiber_list;
 
 // Lista global que armazenará as fibers
 fiber_list * f_list = NULL;
+
+int getnFibers() {
+    return f_list->nFibers;
+}
+
+void fiberScheduler() {
+    fiber_struct * fiberAtual = (fiber_struct *) f_list->fiberAtual;
+    fiber_struct * proximaFiber = (fiber_struct *) fiberAtual->next;
+
+    if (proximaFiber->fiberId != NULL) {
+        setcontext(fiberAtual->context);
+    } else {
+        proximaFiber = (fiber_struct *) proximaFiber->next;
+        setcontext(fiberAtual->context);
+    }
+}
 
 /*
     fiberSwap
@@ -69,6 +87,7 @@ int initFibers() {
     if (f_list == NULL) {
         f_list = (fiber_list*) malloc(sizeof(fiber_list));
         f_list->fibers = NULL;
+        f_list->nFibers = 0;
     }
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
@@ -89,7 +108,9 @@ int initFibers() {
         parentFiber->fiber_list = (struct fiber_list *) f_list;
 
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
-        f_list->fibers = (struct fiber_struct *) parentFiber; 
+        f_list->fibers = (struct fiber_struct *) parentFiber;
+
+        f_list->nFibers++; 
     }
 }
 
@@ -105,7 +126,7 @@ void pushFiber(fiber_struct * fiber) {
     initFibers();
     
     // Caso não haja nenhuma fiber na lista
-    if (f_list->fibers == NULL) {
+    // if (f_list->fibers == NULL) {
         // Variável utilizada para armazenar o contexto do processo pai
         //ucontext_t parentContext;
 
@@ -125,28 +146,30 @@ void pushFiber(fiber_struct * fiber) {
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
         // f_list->fibers = (struct fiber_struct *) parentFiber; 
 
-        fiber_struct * parentFiber = (fiber_struct *) f_list->fibers;
-        parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
+        // fiber_struct * parentFiber = (fiber_struct *) f_list->fibers;
+        // parentFiber->next = (struct fiber_struct *) fiber; // Fiber recém criada
 
         // Inserindo a fiber como segundo elemento da lista
-        fiber->prev = (struct fiber_struct *) parentFiber;
-        fiber->next = NULL;
-        fiber->fiber_list = (struct fiber_list *) f_list;
+        // fiber->prev = (struct fiber_struct *) parentFiber;
+        // fiber->next = NULL;
+        // fiber->fiber_list = (struct fiber_list *) f_list;
     } 
-    else { // Caso haja uma ou mais fibers na lista
+    // else { // Caso haja uma ou mais fibers na lista
         fiber_struct * f_aux1 = (fiber_struct *) f_list->fibers;
 
         // Procurando o último elemento da lista de fibers
-        while (f_aux1->next != NULL) {
+        for (int x = 1; x < f_list->nFibers; x++) {
             f_aux1 = (fiber_struct *) f_aux1->next;
         }
 
         // Inserindo a nova fiber no fim da lista
         f_aux1->next = (struct fiber_struct *) fiber;
         fiber->prev = (struct fiber_struct *) f_aux1;
-        fiber->next = NULL;
+        fiber->next = f_list->fibers;
         fiber->fiber_list = (struct fiber_list *) f_list;
-    }
+
+        f_list->nFibers++;
+    // }
 }
 
 /*

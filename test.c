@@ -47,6 +47,7 @@ int main () {
 
         fiberSwap(&fibers[0]);
     } else {
+        getnFibers();
         printf("Processo completo\n");
     }
 
