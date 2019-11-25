@@ -72,7 +72,6 @@ void pushFiber(fiber_struct * fiber) {
     if (f_list == NULL) {
         f_list = (fiber_list*) malloc(sizeof(fiber_list));
         f_list->fibers = NULL;
-        f_list->parent = NULL;
     }
     
     // Caso não haja nenhuma fiber na lista
