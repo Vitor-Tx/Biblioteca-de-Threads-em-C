@@ -62,6 +62,8 @@ void fiberScheduler() {
 void startFibers() {
     struct sigaction sa;
     struct itimerval timer;
+    int seconds = 1;
+    int microSeconds = 800000;
 
     fiber_struct * aux = (fiber_struct *) f_list->fibers;
     aux = (fiber_struct *) aux->next;
@@ -71,11 +73,11 @@ void startFibers() {
     sa.sa_handler = &fiberScheduler;
     sigaction (SIGVTALRM, &sa, NULL);
  
-    timer.it_value.tv_sec = 2;
-    timer.it_value.tv_usec = 0;
+    timer.it_value.tv_sec = seconds;
+    timer.it_value.tv_usec = microSeconds;
  
-    timer.it_interval.tv_sec = 2;
-    timer.it_interval.tv_usec = 0;
+    timer.it_interval.tv_sec = seconds;
+    timer.it_interval.tv_usec = microSeconds;
 
     setitimer (ITIMER_VIRTUAL, &timer, NULL);
 
