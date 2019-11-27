@@ -62,8 +62,8 @@ void fiberScheduler() {
 void startFibers() {
     struct sigaction sa;
     struct itimerval timer;
-    int seconds = 1;
-    int microSeconds = 800000;
+    int seconds = 0;
+    int microSeconds = 500000;
 
     fiber_struct * aux = (fiber_struct *) f_list->fibers;
     aux = (fiber_struct *) aux->next;
@@ -125,9 +125,6 @@ int initFibers() {
         // Variável utilizada para armazenar o contexto do processo pai
         ucontext_t parentContext;
 
-        // Obtendo o contexto do processo pai
-        getcontext(&parentContext);
-
         // Criando a fiber do processo pai
         fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
 
@@ -141,7 +138,10 @@ int initFibers() {
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
         f_list->fibers = (struct fiber_struct *) parentFiber;
 
-        f_list->nFibers++; 
+        f_list->nFibers++;
+
+        // Obtendo o contexto do processo pai
+        getcontext(&parentContext);
     }
 }
 
@@ -192,6 +192,9 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     
     // Obtendo o contexto atual e armazenando-o na variável fiber
     getcontext(fiber);
+
+    //fiber_struct * parent = (fiber_struct *) f_list->fibers;
+    //ucontext_t * parentContext = (ucontext_t *) parent->context;
 
     // Modificando o contexto para uma nova pilha
     fiber->uc_link = 0;
