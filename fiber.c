@@ -235,7 +235,39 @@ int fiber_join(fiber_t fiber, void **retval);
     Destrói uma fiber correspondente ao seu ID fiber.
 
 */
-int fiber_destroy(fiber_t fiber);
+int fiber_destroy(fiber_t * fiberId){
+    if(fiberId == NULL) 
+        return 1;
+    
+    // Obtendo a primeira fiber da lista de fibers
+    fiber_struct * fiber = (fiber_struct *) f_list->fibers;
+
+    // Procurando a fiber que possui o id fornecido
+    while (fiber != NULL && fiber->fiberId != fiberId) {
+        fiber = (fiber_struct *) fiber->next;
+    }
+
+    // Caso a fiber não tenha sido econtrada
+    if(fiber == NULL) 
+        return 3;
+
+    //pegando a fiber anterior a fiber que vai ser destroida
+    fiber_struct * f_ant = (fiber_struct *) fiber->prev;
+
+    //pegando a proxima fiber da fiber que vai ser destroida
+    fiber_struct * f_prox = (fiber_struct *) fiber->next;
+
+    // tirando a fiber que ira ser destroida da lista circular
+    f_ant->next = (struct fiber_struct *) f_prox;
+    f_prox->prev = (struct fiber_struct *) f_ant;
+
+    //destroindo a fiber
+    free(fiber->context);
+    free(fiber);
+
+    return 0;
+
+}
 
 /*
     fiber_exit
