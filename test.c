@@ -50,7 +50,6 @@ void *threadFunction8(void * c) {
 
 void *threadFunction9(void * c) {
     printf("Thread 9\n");
-    fiber_destroy(&fibers[1]);
     while(1);
 }
 

@@ -122,11 +122,10 @@ int initFibers() {
     }
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
-        // Variável utilizada para armazenar o contexto do processo pai
-        ucontext_t parentContext;
 
         // Criando a fiber do processo pai
         fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
+        ucontext_t parentContext;
 
         // Inicializando a fiber do processo pai
         parentFiber->context = &parentContext;
@@ -139,10 +138,9 @@ int initFibers() {
         f_list->fibers = (struct fiber_struct *) parentFiber;
 
         f_list->nFibers++;
-
-        // Obtendo o contexto do processo pai
-        getcontext(&parentContext);
+		return 1;
     }
+	return 0;
 }
 
 /*
@@ -183,21 +181,13 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
     ucontext_t * fiber = (ucontext_t *) malloc(sizeof(ucontext_t));
 
-    // Convertento a função passada para um tipo aceito
-    // pela system_call makecontext()
-    void (*routine_aux)(void) = (void (*)(void )) start_routine; 
-
     // Struct que irá armazenar a nova fiber
     fiber_struct * f_struct = (fiber_struct *) malloc(sizeof(fiber_struct));
     
     // Obtendo o contexto atual e armazenando-o na variável fiber
     getcontext(fiber);
 
-    //fiber_struct * parent = (fiber_struct *) f_list->fibers;
-    //ucontext_t * parentContext = (ucontext_t *) parent->context;
-
     // Modificando o contexto para uma nova pilha
-    fiber->uc_link = 0;
     fiber->uc_stack.ss_sp = malloc(FIBER_STACK);
     fiber->uc_stack.ss_size = FIBER_STACK;
     fiber->uc_stack.ss_flags = 0;        
@@ -219,6 +209,14 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     // Inserindo a nova fiber na lista de fibers
     pushFiber(f_struct);
 
+    //setando o parentContext(thread principal) como o uc_link da thread criada
+    fiber_struct * parent = (fiber_struct *) f_list->fibers;
+    ucontext_t * parentContext = (ucontext_t *) parent->context;
+    fiber->uc_link = parentContext;
+
+    //pegando o contexto da thread principal e passando para o parentcontext(assim
+    // o atualizando sempre que fiber_create for chamado)
+    getcontext(parentContext);
     return 0;
 }
 
@@ -236,22 +234,27 @@ int fiber_join(fiber_t fiber, void **retval);
     -------------
 
     Destrói uma fiber correspondente ao seu ID fiber.
+    (INCOMPLETA!!! NÃO DEVE SER USADA, POIS NÃO ESTÁ 
+    SETANDO O NOVO CONTEXT NEM VERIFICANDO SE A FIBER 
+    ATUAL ESTÁ RODANDO!)
 
 */
-int fiber_destroy(fiber_t * fiberId){
-    if(fiberId == NULL) 
+int fiber_destroy(fiber_t fiberId){
+    if(fiberId < 0) 
         return 1;
     
     // Obtendo a primeira fiber da lista de fibers
     fiber_struct * fiber = (fiber_struct *) f_list->fibers;
 
     // Procurando a fiber que possui o id fornecido
-    while (fiber != NULL && fiber->fiberId != fiberId) {
+    int i = 1;
+    while (i < f_list->nFibers && *fiber->fiberId != fiberId) {
         fiber = (fiber_struct *) fiber->next;
+        i++;
     }
 
     // Caso a fiber não tenha sido econtrada
-    if(fiber == NULL) 
+    if(i==f_list->nFibers) 
         return 3;
 
     //pegando a fiber anterior a fiber que vai ser destroida
@@ -264,7 +267,7 @@ int fiber_destroy(fiber_t * fiberId){
     f_ant->next = (struct fiber_struct *) f_prox;
     f_prox->prev = (struct fiber_struct *) f_ant;
 
-    //destroindo a fiber
+    //destruindo a fiber
     free(fiber->context);
     free(fiber);
 
