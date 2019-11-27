@@ -54,7 +54,7 @@ void *threadFunction9(void * c) {
 }
 
 void *threadFunction10(void * c) {
-    printf("Thread 10\n");
+    printf("Thread 10\n\n");
     while(1);
 }
 
