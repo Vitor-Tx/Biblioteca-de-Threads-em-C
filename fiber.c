@@ -28,6 +28,7 @@ typedef struct{
     fiber_t * fiberId;
 }fiber_struct;
 
+ucontext_t schedulerFiber, parentContext;
 
 /*
     Struct da lista que armazenará as fibers criadas pela biblioteca
@@ -41,6 +42,11 @@ typedef struct{
 // Lista global que armazenará as fibers
 fiber_list * f_list = NULL;
 
+void timeHandler(){
+    fiber_struct * currentFiber = (fiber_struct *) f_list->fiberAtual;
+    swapcontext(currentFiber->context, &schedulerFiber);
+}
+
 void getnFibers() {
     printf("%d\n", f_list->nFibers);
 }
@@ -49,28 +55,22 @@ void fiberScheduler() {
     fiber_struct * fiberAtual = (fiber_struct *) f_list->fiberAtual;
     fiber_struct * proximaFiber = (fiber_struct *) fiberAtual->next;
 
-    if (proximaFiber->fiberId != NULL) {
-        f_list->fiberAtual = (struct fiber_struct *) proximaFiber;
-        setcontext(proximaFiber->context);
-    } else {
-        proximaFiber = (fiber_struct *) proximaFiber->next;
-        f_list->fiberAtual = (struct fiber_struct *) proximaFiber;
-        setcontext(proximaFiber->context);
-    }
+	f_list->fiberAtual = (struct fiber_struct *) proximaFiber;
+	setcontext(proximaFiber->context);
 }
 
 void startFibers() {
     struct sigaction sa;
     struct itimerval timer;
     int seconds = 0;
-    int microSeconds = 500000;
+    int microSeconds = 500;
 
     fiber_struct * aux = (fiber_struct *) f_list->fibers;
     aux = (fiber_struct *) aux->next;
     f_list->fiberAtual = (struct fiber_struct *) aux;
 
     memset (&sa, 0, sizeof (sa));
-    sa.sa_handler = &fiberScheduler;
+    sa.sa_handler = &timeHandler;
     sigaction (SIGVTALRM, &sa, NULL);
  
     timer.it_value.tv_sec = seconds;
@@ -125,7 +125,6 @@ int initFibers() {
 
         // Criando a fiber do processo pai
         fiber_struct * parentFiber = (fiber_struct *) malloc(sizeof(fiber_struct));
-        ucontext_t parentContext;
 
         // Inicializando a fiber do processo pai
         parentFiber->context = &parentContext;
@@ -138,7 +137,19 @@ int initFibers() {
         f_list->fibers = (struct fiber_struct *) parentFiber;
 
         f_list->nFibers++;
-		return 1;
+
+		getcontext(&schedulerFiber);
+        
+        schedulerFiber.uc_link = &parentContext;
+        schedulerFiber.uc_stack.ss_sp = malloc(FIBER_STACK);
+        schedulerFiber.uc_stack.ss_size = FIBER_STACK;
+        schedulerFiber.uc_stack.ss_flags = 0;        
+        if (schedulerFiber.uc_stack.ss_sp == 0 ) {
+            printf("malloc: Não foi possível alocar a pilha para o escalonador");
+            return 1;
+        }
+
+        makecontext(&schedulerFiber, fiberScheduler, 1, NULL);
     }
 	return 0;
 }
@@ -211,12 +222,11 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
 
     //setando o parentContext(thread principal) como o uc_link da thread criada
     fiber_struct * parent = (fiber_struct *) f_list->fibers;
-    ucontext_t * parentContext = (ucontext_t *) parent->context;
-    fiber->uc_link = parentContext;
+    fiber->uc_link = &schedulerFiber;
 
     //pegando o contexto da thread principal e passando para o parentcontext(assim
     // o atualizando sempre que fiber_create for chamado)
-    getcontext(parentContext);
+    getcontext(parent->context);
     return 0;
 }
 
