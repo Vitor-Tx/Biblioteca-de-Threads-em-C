@@ -21,32 +21,37 @@ typedef unsigned int fiber_t; // tipo para ID de fibers
 
 /*
     Struct de uma fiber
+    status: 
+    - 1: ativa
+    - 0: esperando outra fiber com join
+    --1: terminada
 */
-typedef struct{
+typedef struct Fiber{
     struct Fiber * next;
     struct Fiber * prev;
     ucontext_t * context;
     int status; // para fiberjoin, fiberexit e fiberdestroy
-    fiber_t * fiberId;
+    fiber_t fiberId;
+    struct Fiber * joinFiber;
 }Fiber;
-
-ucontext_t schedulerFiber, parentContext;
 
 /*
     Struct da lista que armazenará as fibers criadas pela biblioteca
 */
-typedef struct{
-    struct Fiber * fibers;
-    struct Fiber * currentFiber;
+typedef struct FiberList{
+    Fiber * fibers;
+    Fiber * currentFiber;
     int nFibers;
 }FiberList;
+
+ucontext_t schedulerContext, parentContext;
 
 // Lista global que armazenará as fibers
 FiberList * f_list = NULL;
 
 void timeHandler(){
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
-    swapcontext(currentFiber->context, &schedulerFiber);
+    swapcontext(currentFiber->context, &schedulerContext);
 }
 
 void getnFibers() {
@@ -55,10 +60,22 @@ void getnFibers() {
 
 void fiberScheduler() {
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
-    Fiber * proximaFiber = (Fiber *) currentFiber->next;
+    Fiber * nextFiber = (Fiber *) currentFiber->next;
 
-	f_list->currentFiber = (struct Fiber *) proximaFiber;
-	setcontext(proximaFiber->context);
+    while(nextFiber->status != 1){ // pulando a thread atual do loop não estiver pronta pra executar
+        if(nextFiber->status == -1) nextFiber = (Fiber *) nextFiber->next;
+        
+        if(nextFiber->status == 0){ // se a thread atual estiver num join
+            Fiber * joinFiber = (Fiber *) nextFiber->joinFiber;
+            if(joinFiber->status != -1) // se a thread que ela está esperando não tiver terminado
+                nextFiber = (Fiber *) nextFiber->next; // pula a thread que está esperando
+            
+            else nextFiber->status = 1;
+        }
+    } 
+        
+	f_list->currentFiber = (Fiber *) nextFiber;
+	setcontext(nextFiber->context); 
 }
 
 void startFibers() {
@@ -69,7 +86,7 @@ void startFibers() {
 
     Fiber * aux = (Fiber *) f_list->fibers;
     aux = (Fiber *) aux->next;
-    f_list->currentFiber = (struct Fiber *) aux;
+    f_list->currentFiber = (Fiber *) aux;
 
     memset (&sa, 0, sizeof (sa));
     sa.sa_handler = &timeHandler;
@@ -95,19 +112,22 @@ void startFibers() {
     retorna 0 se der tudo certo, e retorna um inteiro maior que 0 caso ocorra algum erro.
 
 */
-int fiberSwap(fiber_t * fiberId) {
-    if(fiberId == NULL) return 1;
+int fiberSwap(fiber_t fiberId) {
+    if(fiberId == 0) return 1;
     
     // Obtendo a primeira fiber da lista de fibers
     Fiber * fiber = (Fiber *) f_list->fibers;
 
     // Procurando a fiber que possui o id fornecido
-    while (fiber != NULL && fiber->fiberId != fiberId) {
+    int i = 1;
+    while (i < f_list->nFibers && fiber->fiberId != fiberId) {
         fiber = (Fiber *) fiber->next;
+        i++;
     }
 
     // Caso a fiber não tenha sido econtrada
-    if(fiber == NULL) return 2;
+    if(i==f_list->nFibers) 
+        return 3;
 
     // Setando o contexto da fiber encontrada
     setcontext(fiber->context);
@@ -130,27 +150,29 @@ int initFiberList() {
 
         // Inicializando a fiber do processo pai
         parentFiber->context = &parentContext;
-        parentFiber->fiberId = NULL;
+        parentFiber->fiberId = 0;
         parentFiber->prev = NULL;
         parentFiber->next = NULL; 
+        parentFiber->status = 1;
 
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
-        f_list->fibers = (struct Fiber *) parentFiber;
+        f_list->fibers = (Fiber *) parentFiber;
 
         f_list->nFibers++;
+        f_list->currentFiber = (Fiber *) parentFiber;
 
-		getcontext(&schedulerFiber);
+		getcontext(&schedulerContext);
         
-        schedulerFiber.uc_link = &parentContext;
-        schedulerFiber.uc_stack.ss_sp = malloc(FIBER_STACK);
-        schedulerFiber.uc_stack.ss_size = FIBER_STACK;
-        schedulerFiber.uc_stack.ss_flags = 0;        
-        if (schedulerFiber.uc_stack.ss_sp == 0 ) {
+        schedulerContext.uc_link = &parentContext;
+        schedulerContext.uc_stack.ss_sp = malloc(FIBER_STACK);
+        schedulerContext.uc_stack.ss_size = FIBER_STACK;
+        schedulerContext.uc_stack.ss_flags = 0;        
+        if (schedulerContext.uc_stack.ss_sp == 0 ) {
             printf("malloc: Não foi possível alocar a pilha para o escalonador");
             return 1;
         }
 
-        makecontext(&schedulerFiber, fiberScheduler, 1, NULL);
+        makecontext(&schedulerContext, fiberScheduler, 1, NULL);
     }
 	return 0;
 }
@@ -162,19 +184,19 @@ void pushFiber(Fiber * fiber) {
     
     initFiberList();
     
-    Fiber * f_aux1 = (Fiber *) f_list->fibers;
-
-    f_aux1->prev = (struct Fiber *) fiber;
-
-    // Procurando o último elemento da lista de fibers
-    for (int x = 1; x < f_list->nFibers; x++) {
-        f_aux1 = (Fiber *) f_aux1->next;
+    Fiber * firstFiber = (Fiber *) f_list->fibers;
+    if(f_list->nFibers == 1){
+        firstFiber->next = (Fiber *) fiber;
+        firstFiber->prev = (Fiber *) fiber;
+        fiber->prev = (Fiber *) firstFiber;
+        fiber->next = f_list->fibers; 
     }
-
-    // Inserindo a nova fiber no fim da lista
-    f_aux1->next = (struct Fiber *) fiber;
-    fiber->prev = (struct Fiber *) f_aux1;
-    fiber->next = f_list->fibers;
+    else{
+        Fiber * lastFiber = (Fiber *) firstFiber->prev;
+        lastFiber->next = (Fiber *) fiber;
+        fiber->next = (Fiber *) firstFiber;
+        firstFiber->prev = (Fiber *) fiber;
+    }
 
     f_list->nFibers++;
     
@@ -188,38 +210,44 @@ void pushFiber(Fiber * fiber) {
     start_routine.
 
 */
-int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
+int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
-    ucontext_t * fiber = (ucontext_t *) malloc(sizeof(ucontext_t));
+    ucontext_t * fiberContext = (ucontext_t *) malloc(sizeof(ucontext_t));
 
     // Struct que irá armazenar a nova fiber
-    Fiber * f_struct = (Fiber *) malloc(sizeof(Fiber));
+    Fiber * fiberS = (Fiber *) malloc(sizeof(Fiber));
     
     // Obtendo o contexto atual e armazenando-o na variável fiber
-    getcontext(fiber);
+    getcontext(fiberContext);
 
     // Modificando o contexto para uma nova pilha
-    fiber->uc_link = &schedulerFiber;
-    fiber->uc_stack.ss_sp = malloc(FIBER_STACK);
-    fiber->uc_stack.ss_size = FIBER_STACK;
-    fiber->uc_stack.ss_flags = 0;        
-    if (fiber->uc_stack.ss_sp == 0 ) {
+    fiberContext->uc_link = &schedulerContext;
+    fiberContext->uc_stack.ss_sp = malloc(FIBER_STACK);
+    fiberContext->uc_stack.ss_size = FIBER_STACK;
+    fiberContext->uc_stack.ss_flags = 0;        
+    if (fiberContext->uc_stack.ss_sp == 0 ) {
         printf("malloc: Não foi possível alocar a pilha");
         return 1;
     }
 
     // Criando a fiber propriamente dita
-    makecontext(fiber, (void (*)(void )) start_routine, 1, arg);
+    makecontext(fiberContext, (void (*)(void )) start_routine, 1, arg);
 
     // Inicializando a struct que armazena a fiber recem criada
-    f_struct->context = fiber;
-    f_struct->fiberId = fiberId;
-    f_struct->prev = NULL;
-    f_struct->next = NULL;
+    fiberS->context = fiberContext;
+    fiberS->prev = NULL;
+    fiberS->next = NULL;
+    fiberS->status = 1;
+    fiberS->joinFiber = NULL;
+
 
     // Inserindo a nova fiber na lista de fibers
-    pushFiber(f_struct);
-    
+    pushFiber(fiberS);
+
+    // Atribuindo o id da fiber adequadamente
+    * fiber = f_list->nFibers - 1;
+    fiberS->fiberId = * fiber;
+
     //pegando o contexto da thread principal e passando para o parentcontext(assim
     // o atualizando sempre que a fiber_create for chamada)
     Fiber * parent = (Fiber *) f_list->fibers;
@@ -234,52 +262,90 @@ int fiber_create(fiber_t *fiberId, void *(*start_routine) (void *), void *arg) {
     Faz com que a thread atual espere o término de outra thread para começar a executar.
 
 */
-int fiber_join(fiber_t fiber, void **retval);
+int fiber_join(fiber_t fiber, void **retval){
+    int i;
+    Fiber * currentFiber = (Fiber *) f_list->currentFiber;
+    Fiber * fiberS = (Fiber *) f_list->fibers;
+
+    for(i = 0; i < f_list->nFibers; i++){ // encontrando a fiber com o id recebido
+        fiberS = (Fiber *) fiberS->next;
+        if(fiberS->fiberId == fiber)
+            break;
+    }
+
+    if(i == f_list->nFibers){ // se não for encontrado, a função retorna -1.
+        printf("Erro -1 no join, colega\n");
+        return -1;
+    } 
+
+    if(fiberS->status == -1) // se a fiber que deveria terminar antes já terminou, retornar normalmente
+        return 0;
+
+    currentFiber->status = 0;
+    currentFiber->joinFiber = (Fiber *) fiberS;
+
+    swapcontext(currentFiber->context, &schedulerContext);
+    printf("join deu certo!!!! Id da thread que retornou: %d\n", currentFiber->fiberId);
+    currentFiber->status = 1;
+    return 0;
+}
 
 /*
     fiber_destroy
     -------------
 
     Destrói uma fiber correspondente ao seu ID fiber.
-    (INCOMPLETA!!! NÃO DEVE SER USADA, POIS NÃO ESTÁ 
-    SETANDO O NOVO CONTEXT NEM VERIFICANDO SE A FIBER 
-    ATUAL ESTÁ RODANDO!)
+    (não está pronta, não usem)
 
 */
-int fiber_destroy(fiber_t fiberId){
-    if(fiberId < 0) 
+int fiber_destroy(fiber_t fiber){
+    if(fiber == 0){
         return 1;
-    
-    // Obtendo a primeira fiber da lista de fibers
-    Fiber * fiber = (Fiber *) f_list->fibers;
+    } 
+        
+    int i;
 
-    // Procurando a fiber que possui o id fornecido
-    int i = 1;
-    while (i < f_list->nFibers && *fiber->fiberId != fiberId) {
-        fiber = (Fiber *) fiber->next;
-        i++;
+    // Obtendo a primeira fiber da lista de fibers e a fiber atual
+    Fiber * fiberS = (Fiber *) f_list->fibers;
+    Fiber * currentFiber = (Fiber *) f_list->currentFiber;
+
+    if(currentFiber->fiberId == fiber){ //se a fiber atual tentar se destruir
+        printf("Não é permitido que uma fiber destrua a si mesma");
+        return 2;
     }
 
-    // Caso a fiber não tenha sido econtrada
-    if(i==f_list->nFibers) 
-        return 3;
+    for(i = 0; i < f_list->nFibers; i++){ // encontrando a fiber com o id recebido
+        fiberS = (Fiber *) fiberS->next;
+        if(fiberS->fiberId == fiber)
+            break;
+    }
 
-    //pegando a fiber anterior a fiber que vai ser destroida
-    Fiber * f_ant = (Fiber *) fiber->prev;
+    // Caso a fiber não tenha sido encontrada
+    if(i == f_list->nFibers) 
+        return 3;
+    
+    if(fiberS->status != -1) //por enquanto apenas fibers terminadas podem ser destruídas
+        return 0;
+    
+    //pegando a fiber anterior a fiber que vai ser destruida
+    Fiber * prevFiber = (Fiber *) fiberS->prev;
 
     //pegando a proxima fiber da fiber que vai ser destroida
-    Fiber * f_prox = (Fiber *) fiber->next;
+    Fiber * nextFiber = (Fiber *) fiberS->next;
 
     // tirando a fiber que ira ser destroida da lista circular
-    f_ant->next = (struct Fiber *) f_prox;
-    f_prox->prev = (struct Fiber *) f_ant;
+    prevFiber->next = (Fiber *) nextFiber;
+    nextFiber->prev = (Fiber *) prevFiber;
 
     //destruindo a fiber
-    free(fiber->context);
-    free(fiber);
+    free(fiberS->context->uc_stack.ss_sp);
+    free(fiberS->context);
+    free(fiberS);
+
+    f_list->nFibers--;
+    printf("Fiber destruída com sucesso\n");
 
     return 0;
-
 }
 
 /*
@@ -292,10 +358,11 @@ int fiber_destroy(fiber_t fiberId){
 void fiber_exit(void *retval){
 
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
-    if(currentFiber->fiberId != NULL){
-
+    if(currentFiber->fiberId == 0){
+        printf("Uso inadequado de fiber_exit(). Caso queira terminar o programa, use exit() em vez disso.\n");
+        return;
     }
-    Fiber * aux = (Fiber *) f_list->fibers;
+    currentFiber->status = -1;
 
-    setcontext(aux->context);
+    setcontext(&schedulerContext);
 }

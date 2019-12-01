@@ -10,7 +10,9 @@ ucontext_t parent, child;
 
 void *threadFunction1(void * a) {
     printf("Thread 1\n");
-    while(1);
+    fiber_join(fibers[9], NULL);
+    printf("Thread 1 esperou a thread 10\n");
+    fiber_exit(NULL);
 }
 
 void *threadFunction2(void * b) {
@@ -55,7 +57,7 @@ void *threadFunction9(void * c) {
 
 void *threadFunction10(void * c) {
     printf("Thread 10\n\n");
-    while(1);
+    fiber_exit(NULL);
 }
 
 
@@ -76,8 +78,9 @@ int main () {
 
     startFibers();
     
+    fiber_join(fibers[0], NULL);
     getnFibers();
-    printf("Processo completo\n");
+    printf("Thread principal esperou a thread 1(que tinha esperado a thread 10). Processo completo\n");
 
     return 0;
 }
