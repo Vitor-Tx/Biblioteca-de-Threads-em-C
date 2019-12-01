@@ -22,16 +22,16 @@ typedef unsigned int fiber_t; // tipo para ID de fibers
 /*
     Struct de uma fiber
     status: 
-    - 1: ativa
-    - 0: esperando outra fiber com join
-    --1: terminada
+    -  1: ativa
+    -  0: esperando outra fiber com join
+    - -1: terminada
 */
 typedef struct Fiber{
-    struct Fiber * next;
-    struct Fiber * prev;
-    ucontext_t * context;
-    int status; // para fiberjoin, fiberexit e fiberdestroy
-    fiber_t fiberId;
+    struct Fiber * next;        // Próxima fiber da lista
+    struct Fiber * prev;        // Fiber anterior
+    ucontext_t * context;       // Contexto da fiber
+    int status;                 // para fiberjoin, fiberexit e fiberdestroy
+    fiber_t fiberId;            // Id da fiber
     struct Fiber * joinFiber;
 }Fiber;
 
@@ -39,53 +39,80 @@ typedef struct Fiber{
     Struct da lista que armazenará as fibers criadas pela biblioteca
 */
 typedef struct FiberList{
-    Fiber * fibers;
-    Fiber * currentFiber;
-    int nFibers;
+    Fiber * fibers;             // Lista de fibers
+    Fiber * currentFiber;       // FIber sendo executada no momento
+    int nFibers;                // Quantidade de fibers na lista
 }FiberList;
 
+// Contexto do escalonador e do processo pai
 ucontext_t schedulerContext, parentContext;
 
 // Lista global que armazenará as fibers
 FiberList * f_list = NULL;
 
+/*
+    Tratador do sinal do timer
+*/
 void timeHandler(){
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
     swapcontext(currentFiber->context, &schedulerContext);
 }
 
+/*
+    Retorna a quantidade de fibers presentes na lista
+*/
 void getnFibers() {
     printf("%d\n", f_list->nFibers);
 }
 
+/*
+    Escalonador de fibers
+*/
 void fiberScheduler() {
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
     Fiber * nextFiber = (Fiber *) currentFiber->next;
 
-    while(nextFiber->status != 1){ // pulando a thread atual do loop não estiver pronta pra executar
+    while(nextFiber->status != 1) { // pulando a thread atual do loop não estiver pronta pra executar
+
+        // Caso a fiber já tenha terminado
         if(nextFiber->status == -1) nextFiber = (Fiber *) nextFiber->next;
         
-        if(nextFiber->status == 0){ // se a thread atual estiver num join
+        // Caso a thread atual estiver num join
+        if(nextFiber->status == 0) { 
             Fiber * joinFiber = (Fiber *) nextFiber->joinFiber;
-            if(joinFiber->status != -1) // se a thread que ela está esperando não tiver terminado
+
+            // Caso a thread que ela está esperando não tiver terminado
+            if(joinFiber->status != -1) {
                 nextFiber = (Fiber *) nextFiber->next; // pula a thread que está esperando
-            
-            else nextFiber->status = 1;
+            } else {
+
+                // Caso a thread que ela está esperando tenha terminado
+                nextFiber->status = 1;
+            }
         }
     } 
         
+    // Definindo a próxima fiber selecionada como a fiber atual
 	f_list->currentFiber = (Fiber *) nextFiber;
+
+    // Setando o contexto da próxima fiber
 	setcontext(nextFiber->context); 
 }
 
+/*
+    Funçaõ responsável por iniciar o escalonado
+*/
 void startFibers() {
     struct sigaction sa;
     struct itimerval timer;
     int seconds = 0;
     int microSeconds = 500;
 
+    // Obtendo o contexto da primeira fiber (que não é o processo pai)
     Fiber * aux = (Fiber *) f_list->fibers;
     aux = (Fiber *) aux->next;
+
+    // Definindo a primeira fiber como a fiber atual
     f_list->currentFiber = (Fiber *) aux;
 
     memset (&sa, 0, sizeof (sa));
@@ -100,6 +127,7 @@ void startFibers() {
 
     setitimer (ITIMER_VIRTUAL, &timer, NULL);
 
+    // Setando o contexto da primeira fiber
     setcontext(aux->context);
 }
 
@@ -113,7 +141,7 @@ void startFibers() {
 
 */
 int fiberSwap(fiber_t fiberId) {
-    if(fiberId == 0) return 1;
+    if (fiberId == 0) return 1;
     
     // Obtendo a primeira fiber da lista de fibers
     Fiber * fiber = (Fiber *) f_list->fibers;
@@ -126,8 +154,9 @@ int fiberSwap(fiber_t fiberId) {
     }
 
     // Caso a fiber não tenha sido econtrada
-    if(i==f_list->nFibers) 
+    if (i==f_list->nFibers) {
         return 3;
+    }
 
     // Setando o contexto da fiber encontrada
     setcontext(fiber->context);
@@ -135,6 +164,10 @@ int fiberSwap(fiber_t fiberId) {
     return 0;
 }
 
+/*
+    Função responsável por inicializar a lista de fibers caso ela não tenha
+    sido inicializada ainda
+*/
 int initFiberList() {
     if (f_list == NULL) {
         f_list = (FiberList *) malloc(sizeof(FiberList));
@@ -142,6 +175,7 @@ int initFiberList() {
         f_list->nFibers = 0;
         f_list->currentFiber = NULL;
     }
+
     // Caso não haja nenhuma fiber na lista
     if (f_list->fibers == NULL) {
 
@@ -158,11 +192,16 @@ int initFiberList() {
         // Adicionado a fiber do processo pai como o primeiro elemento da lista
         f_list->fibers = (Fiber *) parentFiber;
 
+        // Incrementando o número de fiber
         f_list->nFibers++;
+
+        // Definindo o processo pai como fiber atual
         f_list->currentFiber = (Fiber *) parentFiber;
 
+        // Obtendo um contexto para o escalonador
 		getcontext(&schedulerContext);
         
+        // Limpamdo o contexto recebido para o escalonador
         schedulerContext.uc_link = &parentContext;
         schedulerContext.uc_stack.ss_sp = malloc(FIBER_STACK);
         schedulerContext.uc_stack.ss_size = FIBER_STACK;
@@ -172,6 +211,7 @@ int initFiberList() {
             return 1;
         }
 
+        // Criando o contexto do escalonador própriamente dito
         makecontext(&schedulerContext, fiberScheduler, 1, NULL);
     }
 	return 0;
@@ -182,24 +222,29 @@ int initFiberList() {
 */
 void pushFiber(Fiber * fiber) {
     
+    // Iniciando a lista de fibers
     initFiberList();
     
+    // Obtendo a primeira fiber da lista (Processo pai)
     Fiber * firstFiber = (Fiber *) f_list->fibers;
-    if(f_list->nFibers == 1){
+
+    // Caso só haja a fiber do processo pai na lista
+    if (f_list->nFibers == 1) {
         firstFiber->next = (Fiber *) fiber;
         firstFiber->prev = (Fiber *) fiber;
         fiber->prev = (Fiber *) firstFiber;
         fiber->next = f_list->fibers; 
-    }
-    else{
+    } else {
+        // Caso haja outras fibers na lista
+
         Fiber * lastFiber = (Fiber *) firstFiber->prev;
         lastFiber->next = (Fiber *) fiber;
         fiber->next = (Fiber *) firstFiber;
         firstFiber->prev = (Fiber *) fiber;
     }
 
+    // Incrementando o número de fibers
     f_list->nFibers++;
-    
 }
 
 /*
@@ -217,7 +262,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // Struct que irá armazenar a nova fiber
     Fiber * fiberS = (Fiber *) malloc(sizeof(Fiber));
     
-    // Obtendo o contexto atual e armazenando-o na variável fiber
+    // Obtendo o contexto atual e armazenando-o na variável fiberContext
     getcontext(fiberContext);
 
     // Modificando o contexto para uma nova pilha
@@ -267,25 +312,37 @@ int fiber_join(fiber_t fiber, void **retval){
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
     Fiber * fiberS = (Fiber *) f_list->fibers;
 
-    for(i = 0; i < f_list->nFibers; i++){ // encontrando a fiber com o id recebido
+    // Encontrando a fiber com o id recebido
+    for (i = 0; i < f_list->nFibers; i++) {
         fiberS = (Fiber *) fiberS->next;
         if(fiberS->fiberId == fiber)
             break;
     }
 
-    if(i == f_list->nFibers){ // se não for encontrado, a função retorna -1.
+    // Se não for encontrado, a função retorna -1.
+    if (i == f_list->nFibers) {
         printf("Erro -1 no join, colega\n");
         return -1;
     } 
 
-    if(fiberS->status == -1) // se a fiber que deveria terminar antes já terminou, retornar normalmente
+    // Se a fiber que deveria terminar antes já terminou, retornar normalmente
+    if(fiberS->status == -1) {
         return 0;
+    }
 
+    // Marcando a fiber atual como esperando
     currentFiber->status = 0;
+
+    // Definindo a fiber que a fiber atual está esperando
     currentFiber->joinFiber = (Fiber *) fiberS;
 
+    // Trocando para o contexto do escalonador
     swapcontext(currentFiber->context, &schedulerContext);
+
+    // Exibido quando a fiber que realizou o join volta a executar
     printf("join deu certo!!!! Id da thread que retornou: %d\n", currentFiber->fiberId);
+
+    // Definindo o status da fiber atual como pronta para executar
     currentFiber->status = 1;
     return 0;
 }
@@ -358,11 +415,16 @@ int fiber_destroy(fiber_t fiber){
 void fiber_exit(void *retval){
 
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
-    if(currentFiber->fiberId == 0){
+
+    // Caso a fiber atual seja o processo pai
+    if (currentFiber->fiberId == 0){
         printf("Uso inadequado de fiber_exit(). Caso queira terminar o programa, use exit() em vez disso.\n");
         return;
     }
+
+    // Definindo status da fiber atual como terminada
     currentFiber->status = -1;
 
+    // Setando o contexto do escalonador
     setcontext(&schedulerContext);
 }
