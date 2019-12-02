@@ -71,6 +71,13 @@ typedef struct FiberList{
 // Contexto para a função de escalonamento e da thread principal
 ucontext_t schedulerContext, parentContext;
 
+// Timer do escalonador
+struct itimerval timer;
+
+// Variáveis globais para o tempo do timer
+int seconds = 1;
+int microSeconds = 0;
+
 // Lista global que armazenará as fibers
 FiberList * f_list = NULL;
 
@@ -105,6 +112,12 @@ void getnFibers() {
     contexto atual será alterado para a fiber com status 1 encontrada.
 */
 void fiberScheduler() {
+    // Zerando o timer para para-lo
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 0;
+
+    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
     Fiber * nextFiber = (Fiber *) currentFiber->next;
 
@@ -131,6 +144,13 @@ void fiberScheduler() {
     // Definindo a próxima fiber selecionada como a fiber atual
 	f_list->currentFiber = (Fiber *) nextFiber;
 
+    // Redefinindo o timer para o tempo normal
+    timer.it_value.tv_sec = seconds;
+    timer.it_value.tv_usec = microSeconds;
+
+    // Resetando o timer
+    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+
     // Setando o contexto da próxima fiber
 	setcontext(nextFiber->context); 
 }
@@ -140,9 +160,6 @@ void fiberScheduler() {
 */
 void startFibers() {
     struct sigaction sa;
-    struct itimerval timer;
-    int seconds = 0;
-    int microSeconds = 500;
 
     // Obtendo o contexto da primeira fiber (que não é a thread principal)
     Fiber * aux = (Fiber *) f_list->fibers;
