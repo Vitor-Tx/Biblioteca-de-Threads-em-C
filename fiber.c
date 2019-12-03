@@ -86,7 +86,10 @@ FiberList * f_list = NULL;
 */
 void timeHandler(){
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
-    swapcontext(currentFiber->context, &schedulerContext);
+    if(swapcontext(currentFiber->context, &schedulerContext) == -1){
+    	perror("Ocorreu um erro no swapcontext da timeHandler");
+    	return;
+    }
 }
 
 /*
@@ -116,7 +119,10 @@ void fiberScheduler() {
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = 0;
 
-    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+    if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
+    	perror("Ocorreu um erro no setitimer da fiberScheduler");
+    	return;
+    }
 
     Fiber * currentFiber = (Fiber *) f_list->currentFiber;
     Fiber * nextFiber = (Fiber *) currentFiber->next;
@@ -149,10 +155,16 @@ void fiberScheduler() {
     timer.it_value.tv_usec = microSeconds;
 
     // Resetando o timer
-    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+    if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
+    	perror("Ocorreu um erro no setitimer da fiberScheduler");
+    	return;
+    }
 
     // Setando o contexto da próxima fiber
-	setcontext(nextFiber->context); 
+	if(setcontext(nextFiber->context) == -1){
+    	perror("Ocorreu um erro no setcontext da fiberScheduler");
+    	return;
+    }
 }
 
 /*
@@ -170,7 +182,10 @@ void startFibers() {
 
     memset (&sa, 0, sizeof (sa));
     sa.sa_handler = &timeHandler;
-    sigaction (SIGVTALRM, &sa, NULL);
+    if(sigaction (SIGVTALRM, &sa, NULL) == -1){
+    	perror("Ocorreu um erro no sigaction da startFibers");
+    	return;
+    }
  
     timer.it_value.tv_sec = seconds;
     timer.it_value.tv_usec = microSeconds;
@@ -178,43 +193,16 @@ void startFibers() {
     timer.it_interval.tv_sec = seconds;
     timer.it_interval.tv_usec = microSeconds;
 
-    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+    if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
+    	perror("Ocorreu um erro no sititimer da startFibers");
+    	return;
+    }
 
     // Setando o contexto da primeira fiber
-    setcontext(aux->context);
-}
-
-/*
-    fiberSwap
-    ---------
-
-    Função que troca o contexto da thread atual com o contexto da thread selecionada
-
-    retorna 0 se der tudo certo, e retorna um inteiro maior que 0 caso ocorra algum erro.
-
-*/
-int fiberSwap(fiber_t fiberId) {
-    if (fiberId == 0) return 1;
-    
-    // Obtendo a primeira fiber da lista de fibers
-    Fiber * fiber = (Fiber *) f_list->fibers;
-
-    // Procurando a fiber que possui o id fornecido
-    int i = 1;
-    while (i < f_list->nFibers && fiber->fiberId != fiberId) {
-        fiber = (Fiber *) fiber->next;
-        i++;
+    if(setcontext(aux->context) == -1){
+    	perror("Ocorreu um erro no setcontext da setcontext");
+    	return;
     }
-
-    // Caso a fiber não tenha sido econtrada
-    if (i==f_list->nFibers) {
-        return 3;
-    }
-
-    // Setando o contexto da fiber encontrada
-    setcontext(fiber->context);
-
-    return 0;
 }
 
 /*
@@ -253,7 +241,10 @@ int initFiberList() {
     f_list->currentFiber = (Fiber *) parentFiber;
 
     // Obtendo um contexto para o escalonador
-    getcontext(&schedulerContext);
+    if(getcontext(&schedulerContext) == -1){
+    	perror("Ocorreu um erro no getcontext da initFiberList");
+    	return 3;
+    }
     
     // Limpamdo o contexto recebido para o escalonador
     schedulerContext.uc_link = &parentContext;
@@ -321,7 +312,10 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     Fiber * fiberS = (Fiber *) malloc(sizeof(Fiber));
     
     // Obtendo o contexto atual e armazenando-o na variável fiberContext
-    getcontext(fiberContext);
+    if(getcontext(fiberContext) == -1){
+    	perror("Ocorreu um erro no getcontext da fiber_create");
+    	return 3;
+    }
 
     // Modificando o contexto para uma nova pilha
     fiberContext->uc_link = &schedulerContext;
@@ -354,7 +348,11 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     //pegando o contexto da thread principal e passando para o parentcontext(assim
     // o atualizando sempre que a fiber_create for chamada)
     Fiber * parent = (Fiber *) f_list->fibers;
-    getcontext(parent->context);
+    if(getcontext(parent->context) == -1){
+    	perror("Ocorreu um erro no getcontext da fiber_create");
+    	return 5;
+    }
+
     return 0;
 }
 
@@ -395,7 +393,10 @@ int fiber_join(fiber_t fiber, void **retval){
     currentFiber->joinFiber = (Fiber *) fiberS;
 
     // Trocando para o contexto do escalonador
-    swapcontext(currentFiber->context, &schedulerContext);
+    if(swapcontext(currentFiber->context, &schedulerContext) == -1){
+    	perror("Ocorreu um erro no getcontext da fiber_create");
+    	return 3;
+    }
 
     // Exibido quando a fiber que realizou o join volta a executar
     printf("join deu certo!!!! Id da thread que retornou: %d\n", currentFiber->fiberId);

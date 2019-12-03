@@ -1,7 +1,5 @@
 typedef unsigned int fiber_t;
 
-int fiberSwap(fiber_t fiberId);
-
 void getnFibers();
 
 void startFibers();
