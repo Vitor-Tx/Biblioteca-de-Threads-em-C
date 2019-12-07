@@ -26,16 +26,6 @@
 #define WAITING 0
 #define FINISHED -1
 
-// Erros das funções
-#define ERR_EXISTS 11
-#define ERR_MALL 22
-#define ERR_GTCTX 33
-#define ERR_SWPCTX 44
-#define ERR_NOTFOUND 55
-#define ERR_JOINCRRT 66
-
-typedef unsigned int fiber_t; // tipo para ID de fibers
-
 /*
     Waiting
     -------
