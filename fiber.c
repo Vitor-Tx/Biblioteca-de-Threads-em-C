@@ -139,7 +139,7 @@ void timeHandler(){
 }
 
 /*
-    restoreTimer
+    stopTimer
     ------------
 
     Salva os segundos e microsegundos restantes do timer atual
