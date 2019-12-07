@@ -10,8 +10,6 @@ typedef unsigned int fiber_t; // tipo para ID de fibers
 
 void getnFibers();
 
-void startFibers();
-
 /*
     fiber_create
     ------------
