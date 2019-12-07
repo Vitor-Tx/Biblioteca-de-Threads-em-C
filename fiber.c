@@ -231,8 +231,8 @@ void releaseFibers(Waiting *waitingList){
     fiber_destroy
     -------------
 
-    Destrói uma fiber correspondente ao seu ID fiber.
-    (não está pronta, não usem)
+    Destrói uma fiber apontada por fiber e reorganiza
+    os nodos da lista de fibers.
 
 */
 Fiber * fiber_destroy(Fiber * fiber){
