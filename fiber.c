@@ -17,13 +17,22 @@
 // Pilha de 64kB
 #define FIBER_STACK 1024*64
 
-// Constantes literais 
+// Timeslice das fibers
 #define SECONDS 0
 #define MICSECONDS 35000
+
+// Status das fibers
 #define READY 1
-#define FINISHED -1
 #define WAITING 0
-#define ERR_MALL 1
+#define FINISHED -1
+
+// Erros das funções
+#define ERR_EXISTS 11
+#define ERR_MALL 22
+#define ERR_GTCTX 33
+#define ERR_SWPCTX 44
+#define ERR_NOTFOUND 55
+#define ERR_JOINCRRT 66
 
 typedef unsigned int fiber_t; // tipo para ID de fibers
 
@@ -447,7 +456,7 @@ int initFiberList() {
     // Obtendo um contexto para o escalonador
     if(getcontext(&schedulerContext) == -1){
     	perror("Ocorreu um erro no getcontext da initFiberList");
-    	return 3;
+    	return ERR_GTCTX;
     }
     
     // Limpamdo o contexto recebido para o escalonador
@@ -518,6 +527,12 @@ void pushFiber(Fiber * fiber) {
 
 */
 int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
+
+    if((* fiber) != NULL){
+        printf("Essa fiber já existe\n");
+        return ERR_EXISTS;
+    }
+
     // Variável que irá armazenar a nova fiber 
     ucontext_t * fiberContext = (ucontext_t *) malloc(sizeof(ucontext_t));
     if (fiberContext == NULL) {
@@ -535,7 +550,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // Obtendo o contexto atual e armazenando-o na variável fiberContext
     if(getcontext(fiberContext) == -1){
     	perror("Ocorreu um erro no getcontext da fiber_create");
-    	return 3;
+    	return ERR_GTCTX;
     }
 
     // Modificando o contexto para uma nova pilha
@@ -572,7 +587,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // o atualizando sempre que a fiber_create for chamada)
     if(getcontext(f_list->currentFiber->context) == -1){
     	perror("Ocorreu um erro no getcontext da fiber_create");
-    	return 5;
+    	return ERR_GTCTX;
     }
 
     return 0;
@@ -591,11 +606,11 @@ int fiber_join(fiber_t fiber, void **retval){
 
     // se a fiber não foi encontrada na lista
     if(fiberS == NULL)
-        return -1;
+        return ERR_NOTFOUND;
 
     // se a fiber a ser esperada é a que está executando
     if(fiberS->fiberId == f_list->currentFiber->fiberId)
-        return 1;
+        return ERR_JOINCRRT;
 
     // Se a fiber que deveria terminar antes já terminou, retornar normalmente
     if(fiberS->status == FINISHED) {
@@ -629,7 +644,7 @@ int fiber_join(fiber_t fiber, void **retval){
     // Trocando para o contexto do escalonador
     if(swapcontext(f_list->currentFiber->context, &schedulerContext) == -1){
     	perror("Ocorreu um erro no swapcontext da fiber_join");
-    	return 3;
+    	return ERR_SWPCTX;
     }
 
     // (remover depois) Exibido quando a fiber que realizou o join volta a executar
