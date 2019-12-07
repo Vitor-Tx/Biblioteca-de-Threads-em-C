@@ -139,6 +139,43 @@ void timeHandler(){
 }
 
 /*
+    restoreTimer
+    ------------
+
+    Salva os segundos e microsegundos restantes do timer atual
+    na estrutura apontada por restored, e para o timer atual.
+
+*/
+void stopTimer(struct itimerval * restored){
+    if (getitimer(ITIMER_VIRTUAL, restored) == -1) {
+        perror("erro na getitimer() da stopTimer");
+        exit(1);
+    }
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_sec = 0;
+    if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
+    	perror("Ocorreu um erro no setitimer() da stopTimer");
+    	return;
+    }
+}
+
+/*
+    restoreTimer
+    ------------
+
+    Seta o timer com os valores obtidos pela estrutura apontada
+    por restored.
+
+*/
+void restoreTimer(struct itimerval * restored){
+    // Restaurando o timer para o restante do timeslice
+    if(setitimer (ITIMER_VIRTUAL, restored, NULL) == -1){
+    	perror("Ocorreu um erro no setitimer da restoreTimer");
+    	return;
+    }
+}
+
+/*
     findFiber
     ---------
 
@@ -180,11 +217,64 @@ Fiber * findFiber(fiber_t fiberId){
 void releaseFibers(Waiting *waitingList){
     // Enquanto houver fibers esperando
     while(waitingList != NULL){
+        Waiting * waitingNode = waitingList->next;
         Fiber * waitingFiber = findFiber(waitingList->waitingId); // Procura a fiber com o id do nodo atual da waitingList
         if(waitingFiber != NULL && waitingFiber->status == WAITING) // Se a fiber existir e estiver esperando
             waitingFiber->status = READY;  // libera a fiber
-        waitingList = waitingList->next; // vai para o próximo nodo
+        free(waitingList); // libera o nodo no topo
+        waitingList = (Waiting *) waitingNode; // vai para o próximo nodo
     }
+    
+}
+
+/*
+    fiber_destroy
+    -------------
+
+    Destrói uma fiber correspondente ao seu ID fiber.
+    (não está pronta, não usem)
+
+*/
+Fiber * fiber_destroy(Fiber * fiber){
+
+    int id = fiber->fiberId;
+
+    if(id == 0) // não é permitido destruir a thread principal
+        return NULL;
+    
+    if(f_list->currentFiber->fiberId == id){ //se a fiber atual tentar se destruir
+        printf("Não é permitido que uma fiber destrua a si mesma");
+        return NULL;
+    }
+    
+    if(fiber->status != FINISHED) //apenas fibers terminadas podem ser destruídas
+        return NULL;
+    
+    //pegando a fiber anterior a fiber que vai ser destruida
+    Fiber * prevFiber = (Fiber *) fiber->prev;
+    if(prevFiber == NULL)
+        printf("prevFiber é null\n");
+
+    //pegando a proxima fiber da fiber que vai ser destruida
+    Fiber * nextFiber = (Fiber *) fiber->next;
+    if(nextFiber == NULL)
+        printf("nextFiber é null\n");
+
+    // tirando a fiber que irá ser destruida da lista circular
+    nextFiber->prev = (Fiber *) prevFiber; 
+
+    prevFiber->next = (Fiber *) nextFiber;
+    
+    //destruindo a fiber
+    free(fiber->context->uc_stack.ss_sp);
+    free(fiber->context);
+    free(fiber);
+
+    f_list->nFibers--;
+    // (remover depois)
+    // printf("Fiber destruída com sucesso, o id dela era: %d\n", id);
+
+    return nextFiber;
 }
 
 /*
@@ -227,16 +317,24 @@ void fiberScheduler() {
     while(nextFiber->status != READY) { // pulando a thread atual do loop não estiver pronta pra executar
 
         // Caso a fiber já tenha terminado
-        if(nextFiber->status == FINISHED) nextFiber = (Fiber *) nextFiber->next;
+        if(nextFiber->status == FINISHED){
+            
+            releaseFibers(nextFiber->waitingList);
+            nextFiber = fiber_destroy(nextFiber);
+            if(nextFiber == NULL){
+                printf("Erro na fiber_destroy.\n");
+            }
+        } 
         
         // Caso a thread atual estiver num join
         if(nextFiber->status == WAITING) { 
-            Fiber * joinFiber = (Fiber *) nextFiber->joinFiber;
 
             // Caso a thread que ela está esperando não tiver terminado
-            if(joinFiber->status != FINISHED) {
+            if(nextFiber->joinFiber->status != FINISHED) {
                 nextFiber = (Fiber *) nextFiber->next; // pula a thread que está esperando
-            } else {
+            } 
+            
+            else {
 
                 // Caso a thread que ela está esperando tenha terminado
                 nextFiber->status = READY;
@@ -265,8 +363,8 @@ void fiberScheduler() {
 }
 
 /*  
-    statFibers
-    ----------
+    startFibers
+    -----------
 
     Função responsável por inicializar as estruturas do timer e 
     sinalizador, além de fazer a primeira chamada para o escalonador,
@@ -315,12 +413,20 @@ void startFibers() {
 int initFiberList() {
     
     f_list = (FiberList *) malloc(sizeof(FiberList));
+    if (f_list == NULL) {
+        perror("erro malloc na criação da lista na initFiberList");
+        return ERR_MALL;
+    }
     f_list->fibers = NULL;
     f_list->nFibers = 0;
     f_list->currentFiber = NULL;
     
     // Criando a estrutura de fiber para a thread principal
     Fiber * parentFiber = (Fiber *) malloc(sizeof(Fiber));
+    if (parentFiber == NULL) {
+        perror("erro malloc na criação da parentFiber da initFiberList");
+        return ERR_MALL;
+    }
 
     // Inicializando a estrutura da thread principal
     parentFiber->context = &parentContext;
@@ -349,9 +455,9 @@ int initFiberList() {
     schedulerContext.uc_stack.ss_sp = malloc(FIBER_STACK);
     schedulerContext.uc_stack.ss_size = FIBER_STACK;
     schedulerContext.uc_stack.ss_flags = 0;        
-    if (schedulerContext.uc_stack.ss_sp == 0 ) {
-        printf("malloc: Não foi possível alocar a pilha para o escalonador");
-        return 1;
+    if (schedulerContext.uc_stack.ss_sp == NULL) {
+        perror("erro malloc na criação da pilha na initFiberList");
+        return ERR_MALL;
     }
 
     // Criando o contexto do escalonador própriamente dito
@@ -364,7 +470,12 @@ int initFiberList() {
     pushFiber
     ---------
 
-    Insere a fiber recebida pela função na lista de fibers.
+    Insere a fiber recebida pela função na lista de fibers. Caso a 
+    lista ainda não tenha sido criada, a função initFiberList() é 
+    chamada. Durante a inserção da fiber, o timeslice restante da 
+    fiber atual é salvo e o timer é pausado. Depois que a inserção
+    é feita, o timer é reiniciado com o timeslice salvo anteriormente.
+
 */
 void pushFiber(Fiber * fiber) {
     
@@ -372,6 +483,10 @@ void pushFiber(Fiber * fiber) {
     if(f_list == NULL)
         initFiberList();
 
+    struct itimerval restored;
+
+    //para o timer para evitar troca de fibers em região crítica
+    stopTimer(&restored);
     // Caso só haja a fiber da thread principal na lista
     if (f_list->nFibers == 1) {
         fiber->prev = (Fiber *) f_list->fibers;
@@ -381,11 +496,14 @@ void pushFiber(Fiber * fiber) {
         
     } else {
         // Caso haja outras fibers na lista
-        Fiber * lastFiber = (Fiber *) f_list->fibers->prev;
         fiber->next = (Fiber *) f_list->fibers;
+        fiber->prev = (Fiber *) f_list->fibers->prev;
+        fiber->prev->next = (Fiber *) fiber;
         f_list->fibers->prev = (Fiber *) fiber;
-        lastFiber->next = (Fiber *) fiber;
     }
+
+    // restaura o timer para o restante do timeslice que a fiber atual possuía
+    restoreTimer(&restored);
 
     // Incrementando o número de fibers
     f_list->nFibers++;
@@ -402,9 +520,17 @@ void pushFiber(Fiber * fiber) {
 int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // Variável que irá armazenar a nova fiber 
     ucontext_t * fiberContext = (ucontext_t *) malloc(sizeof(ucontext_t));
+    if (fiberContext == NULL) {
+        perror("erro malloc na criação do context da fiber_create");
+        return ERR_MALL;
+    }
 
     // Struct que irá armazenar a nova fiber
     Fiber * fiberS = (Fiber *) malloc(sizeof(Fiber));
+    if (fiberS == NULL) {
+        perror("erro malloc na criação da fiber struct da fiber_create");
+        return ERR_MALL;
+    }
     
     // Obtendo o contexto atual e armazenando-o na variável fiberContext
     if(getcontext(fiberContext) == -1){
@@ -418,7 +544,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     fiberContext->uc_stack.ss_size = FIBER_STACK;
     fiberContext->uc_stack.ss_flags = 0;        
     if (fiberContext->uc_stack.ss_sp == 0 ) {
-        printf("malloc: Não foi possível alocar a pilha");
+        perror("erro malloc na criação da pilha na fiber_create");
         return ERR_MALL;
     }
 
@@ -441,7 +567,6 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     // Atribuindo o id da fiber adequadamente
     * fiber = f_list->nFibers - 1;
     fiberS->fiberId = * fiber;
-   
 
     //pegando o contexto da thread principal e passando para o parentcontext(assim
     // o atualizando sempre que a fiber_create for chamada)
@@ -478,6 +603,10 @@ int fiber_join(fiber_t fiber, void **retval){
     }
 
     Waiting * waitingNode = (Waiting *) malloc(sizeof(Waiting));
+    if (waitingNode == NULL) {
+        perror("erro malloc na fiber_join");
+        return ERR_MALL;
+    }
     waitingNode->waitingId = fiber;
     waitingNode->next = NULL;
 
@@ -504,59 +633,10 @@ int fiber_join(fiber_t fiber, void **retval){
     }
 
     // (remover depois) Exibido quando a fiber que realizou o join volta a executar
-    printf("join deu certo!!!! Id da thread que retornou: %d\n", f_list->currentFiber->fiberId);
+    // printf("join deu certo!!!! Id da thread que retornou: %d\n", f_list->currentFiber->fiberId);
 
     // Definindo o status da fiber atual como pronta para executar
     f_list->currentFiber->status = READY;
-    return 0;
-}
-
-/*
-    fiber_destroy
-    -------------
-
-    Destrói uma fiber correspondente ao seu ID fiber.
-    (não está pronta, não usem)
-
-*/
-int fiber_destroy(fiber_t fiber){
-    if(fiber == 0){
-        return 1;
-    } 
-
-    if(f_list->currentFiber->fiberId == fiber){ //se a fiber atual tentar se destruir
-        printf("Não é permitido que uma fiber destrua a si mesma");
-        return 2;
-    }
-
-    // Obtendo a primeira fiber da lista de fibers e a fiber atual
-    Fiber * fiberS = findFiber(fiber);
-
-    // Caso a fiber não tenha sido encontrada
-    if(fiberS == NULL) 
-        return 3; 
-    
-    if(fiberS->status != FINISHED) //por enquanto apenas fibers terminadas podem ser destruídas
-        return 0;
-    
-    //pegando a fiber anterior a fiber que vai ser destruida
-    Fiber * prevFiber = (Fiber *) fiberS->prev;
-
-    //pegando a proxima fiber da fiber que vai ser destroida
-    Fiber * nextFiber = (Fiber *) fiberS->next;
-
-    // tirando a fiber que ira ser destroida da lista circular
-    prevFiber->next = (Fiber *) nextFiber;
-    nextFiber->prev = (Fiber *) prevFiber;
-
-    //destruindo a fiber
-    free(fiberS->context->uc_stack.ss_sp);
-    free(fiberS->context);
-    free(fiberS);
-
-    f_list->nFibers--;
-    printf("Fiber destruída com sucesso\n");
-
     return 0;
 }
 
@@ -576,9 +656,6 @@ void fiber_exit(void *retval){
         printf("Uso inadequado de fiber_exit(). Caso queira terminar o programa, use exit() em vez disso.\n");
         return;
     }
-
-    // Percorrendo a lista de fibers em espera e as liberando
-    releaseFibers(f_list->currentFiber->waitingList);
 
     // Definindo status da fiber atual como terminada
     f_list->currentFiber->status = FINISHED;

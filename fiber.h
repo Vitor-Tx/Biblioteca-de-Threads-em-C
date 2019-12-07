@@ -24,15 +24,6 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg);
 int fiber_join(fiber_t fiber, void **retval);
 
 /*
-    fiber_destroy
-    -------------
-
-    Destrói uma fiber correspondente ao seu ID fiber.
-
-*/
-int fiber_destroy(fiber_t fiber);
-
-/*
     fiber_exit
     ----------
 

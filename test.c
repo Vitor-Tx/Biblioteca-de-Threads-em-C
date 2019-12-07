@@ -22,12 +22,12 @@ void *threadFunction2(void * b) {
 
 void *threadFunction3(void * c) {
     printf("Thread 3\n");
-    while(1);
+    fiber_exit(NULL);
 }
 
 void *threadFunction4(void * c) {
     printf("Thread 4\n");
-    while(1);
+    fiber_exit(NULL);
 }
 
 void *threadFunction5(void * c) {
@@ -37,7 +37,7 @@ void *threadFunction5(void * c) {
 
 void *threadFunction6(void * c) {
     printf("Thread 6\n");
-    while(1);
+    fiber_exit(NULL);
 }
 
 void *threadFunction7(void * c) {
