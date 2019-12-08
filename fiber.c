@@ -186,7 +186,7 @@ void restoreTimer(struct itimerval * restored){
 Fiber * findFiber(fiber_t fiberId){
 
     // se o fiberId não estiver inicializado
-    if(fiberId == (fiber_t)NULL){
+    if(fiberId == 0){
         return NULL;
     }
     
