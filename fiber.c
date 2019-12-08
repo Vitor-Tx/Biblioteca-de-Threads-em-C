@@ -42,8 +42,8 @@
 
 */
 typedef struct Waiting{
-    fiber_t waitingId;              // Id da fiber do nodo atual
-    struct Waiting * next;          // Ponteiro para o próximo nodo
+    fiber_t waitingId;       // Id da fiber do nodo atual
+    struct Waiting * next;   // Ponteiro para o próximo nodo
 }Waiting;
 
 /*
@@ -230,8 +230,8 @@ void releaseFibers(Waiting *waitingList){
     fiber_destroy
     -------------
 
-    Destrói uma fiber apontada por fiber e reorganiza
-    os nodos da lista de fibers.
+    Destrói uma fiber struct apontada por "fiber" e 
+    reorganiza os nodos da lista de fibers.
 
 */
 Fiber * fiber_destroy(Fiber * fiber){
@@ -531,8 +531,8 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     }
 
     // Struct que irá armazenar a nova fiber
-    Fiber * fiberS = (Fiber *) malloc(sizeof(Fiber));
-    if (fiberS == NULL) {
+    Fiber * fiberNode = (Fiber *) malloc(sizeof(Fiber));
+    if (fiberNode == NULL) {
         perror("erro malloc na criação da fiber struct da fiber_create");
         return ERR_MALL;
     }
@@ -557,23 +557,23 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     makecontext(fiberContext, (void (*)(void )) start_routine, 1, arg);
 
     // Inicializando a struct que armazena a fiber recem criada
-    fiberS->context = fiberContext;
-    fiberS->prev = NULL;
-    fiberS->next = NULL;
-    fiberS->status = READY;
-    fiberS->joinFiber = NULL;
-    fiberS->waitingList = NULL;
+    fiberNode->context = fiberContext;
+    fiberNode->prev = NULL;
+    fiberNode->next = NULL;
+    fiberNode->status = READY;
+    fiberNode->joinFiber = NULL;
+    fiberNode->waitingList = NULL;
 
      
 
     // Inserindo a nova fiber na lista de fibers
-    pushFiber(fiberS);
+    pushFiber(fiberNode);
 
     // Atribuindo o id da fiber adequadamente
     * fiber = f_list->nFibers - 1;
-    fiberS->fiberId = * fiber;
+    fiberNode->fiberId = * fiber;
 
-    //pegando o contexto da thread principal e passando para o parentcontext(assim
+    //pegando o contexto da thread atual e passando para o currentContext(assim
     // o atualizando sempre que a fiber_create for chamada)
     if(getcontext(f_list->currentFiber->context) == -1){
     	perror("Ocorreu um erro no getcontext da fiber_create");
@@ -592,18 +592,18 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
 */
 int fiber_join(fiber_t fiber, void **retval){
 
-    Fiber * fiberS = findFiber(fiber);
+    Fiber * fiberNode = findFiber(fiber);
 
     // se a fiber não foi encontrada na lista
-    if(fiberS == NULL)
+    if(fiberNode == NULL)
         return ERR_NOTFOUND;
 
     // se a fiber a ser esperada é a que está executando
-    if(fiberS->fiberId == f_list->currentFiber->fiberId)
+    if(fiberNode->fiberId == f_list->currentFiber->fiberId)
         return ERR_JOINCRRT;
 
     // Se a fiber que deveria terminar antes já terminou, retornar normalmente
-    if(fiberS->status == FINISHED) {
+    if(fiberNode->status == FINISHED) {
         return 0;
     }
 
@@ -616,17 +616,17 @@ int fiber_join(fiber_t fiber, void **retval){
     waitingNode->next = NULL;
 
 
-    if(fiberS->waitingList == NULL){
-        fiberS->waitingList = (Waiting *) waitingNode;     
+    if(fiberNode->waitingList == NULL){
+        fiberNode->waitingList = (Waiting *) waitingNode;     
     }  
     else{
-        Waiting * waitingTop = (Waiting *) fiberS->waitingList;
-        fiberS->waitingList = (Waiting *) waitingNode;
-        fiberS->waitingList->next = (Waiting *) waitingTop;
+        Waiting * waitingTop = (Waiting *) fiberNode->waitingList;
+        fiberNode->waitingList = (Waiting *) waitingNode;
+        fiberNode->waitingList->next = (Waiting *) waitingTop;
     }
 
     // Definindo a fiber que a fiber atual está esperando
-    f_list->currentFiber->joinFiber = (Fiber *) fiberS;
+    f_list->currentFiber->joinFiber = (Fiber *) fiberNode;
 
     // Marcando a fiber atual como esperando
     f_list->currentFiber->status = WAITING;  
