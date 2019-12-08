@@ -109,6 +109,7 @@ typedef struct FiberList{
     Fiber * fibers;             // Lista de fibers
     Fiber * currentFiber;       // FIber sendo executada no momento
     int nFibers;                // Quantidade de fibers na lista
+    int started;                // Indica se as fibers estão rodando
 }FiberList;
 
 // Contexto para a função de escalonamento e da thread principal
@@ -312,12 +313,11 @@ void fiberScheduler() {
     }
 
     Fiber * nextFiber = (Fiber *) f_list->currentFiber->next;
-
+    
     while(nextFiber->status != READY) { // pulando a thread atual do loop não estiver pronta pra executar
 
         // Caso a fiber já tenha terminado
         if(nextFiber->status == FINISHED){
-            
             releaseFibers(nextFiber->waitingList);
             nextFiber = fiber_destroy(nextFiber);
             if(nextFiber == NULL){
@@ -327,13 +327,10 @@ void fiberScheduler() {
         
         // Caso a thread atual estiver num join
         if(nextFiber->status == WAITING) { 
-
             // Caso a thread que ela está esperando não tiver terminado
             if(nextFiber->joinFiber->status != FINISHED) {
                 nextFiber = (Fiber *) nextFiber->next; // pula a thread que está esperando
-            } 
-            
-            else {
+            } else {
 
                 // Caso a thread que ela está esperando tenha terminado
                 nextFiber->status = READY;
@@ -372,9 +369,6 @@ void fiberScheduler() {
 void startFibers() {
     struct sigaction sa;
 
-    // Definindo a primeira fiber como a fiber atual(a fiber logo após a thread principal)
-    f_list->currentFiber = (Fiber *) f_list->fibers->next;
-
     memset (&sa, 0, sizeof (sa));
     sa.sa_handler = &timeHandler;
     if(sigaction (SIGVTALRM, &sa, NULL) == -1){
@@ -390,12 +384,6 @@ void startFibers() {
 
     if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
     	perror("Ocorreu um erro no sititimer da startFibers");
-    	return;
-    }
-
-    // Setando o contexto para o contexto da primeira fiber
-    if(setcontext(f_list->currentFiber->context) == -1){
-    	perror("Ocorreu um erro no setcontext da startFibers");
     	return;
     }
 }
@@ -419,6 +407,7 @@ int initFiberList() {
     f_list->fibers = NULL;
     f_list->nFibers = 0;
     f_list->currentFiber = NULL;
+    f_list->started = 0;
     
     // Criando a estrutura de fiber para a thread principal
     Fiber * parentFiber = (Fiber *) malloc(sizeof(Fiber));
@@ -564,8 +553,6 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     fiberNode->joinFiber = NULL;
     fiberNode->waitingList = NULL;
 
-     
-
     // Inserindo a nova fiber na lista de fibers
     pushFiber(fiberNode);
 
@@ -578,6 +565,11 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     if(getcontext(f_list->currentFiber->context) == -1){
     	perror("Ocorreu um erro no getcontext da fiber_create");
     	return ERR_GTCTX;
+    }
+
+    if (f_list->started == 0) {
+        f_list->started = 1;
+        startFibers();
     }
 
     return 0;

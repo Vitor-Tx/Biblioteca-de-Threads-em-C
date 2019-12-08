@@ -75,8 +75,6 @@ int main () {
     fiber_create(&fibers[7], threadFunction8, arg);
     fiber_create(&fibers[8], threadFunction9, arg);
     fiber_create(&fibers[9], threadFunction10, arg);
-
-    startFibers();
     
     fiber_join(fibers[0], NULL);
     getnFibers();
