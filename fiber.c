@@ -185,6 +185,11 @@ void restoreTimer(struct itimerval * restored){
 */
 Fiber * findFiber(fiber_t fiberId){
 
+    // se o fiberId não estiver inicializado
+    if(fiberId == (fiber_t)NULL){
+        return NULL;
+    }
+    
     // se for o id da thread principal, retorná-la
     if(f_list->fibers->fiberId == fiberId)
         return f_list->fibers;
@@ -506,8 +511,14 @@ void pushFiber(Fiber * fiber) {
 
 */
 int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
+    
+    // se o ponteiro apontar para NULL
+    if(fiber == NULL)
+        return ERR_NULLID;
 
-    if((* fiber) != NULL){
+    // verificando se já existe uma fiber com esse id ou se o
+    // fiber_t foi inicializado fora da biblioteca
+    if(findFiber(* fiber) != NULL){
         printf("Essa fiber já existe\n");
         return ERR_EXISTS;
     }
