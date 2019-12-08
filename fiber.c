@@ -507,7 +507,7 @@ void pushFiber(Fiber * fiber) {
     ------------
 
     Cria uma fiber(user-level thread) que executará a rotina(função)
-    start_routine.
+    start_routine recebendo o parâmetro arg.
 
 */
 int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
@@ -571,16 +571,19 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     * fiber = f_list->nFibers - 1;
     fiberNode->fiberId = * fiber;
 
-    //pegando o contexto da thread atual e passando para o currentContext(assim
-    // o atualizando sempre que a fiber_create for chamada)
-    if(getcontext(f_list->currentFiber->context) == -1){
-    	perror("Ocorreu um erro no getcontext da fiber_create");
-    	return ERR_GTCTX;
-    }
-
+    // Verificando se o escalonador já começou a rodar.
+    // Caso não tenha, startFibers() é chamada e o contexto
+    // da thread principal é capturado.
     if (f_list->started == 0) {
         f_list->started = 1;
         startFibers();
+
+        //pegando o contexto da thread atual e passando para o currentContext(assim
+        // o atualizando sempre que a fiber_create for chamada)
+        if(getcontext(f_list->fibers->context) == -1){
+            perror("Ocorreu um erro no getcontext da fiber_create");
+            return ERR_GTCTX;
+        }
     }
 
     return 0;
@@ -652,8 +655,8 @@ int fiber_join(fiber_t fiber, void **retval){
     fiber_exit
     ----------
 
-    Para a execução da fiber atual e altera seu status para -1.
-    Com seu status -1, essa fiber nunca mais será executada.
+    Para a execução da fiber atual e altera seu status para FINISHED.
+    Com seu status FINISHED, essa fiber nunca mais será executada.
     Logo após isso, o escalonador é chamado.
 
 */

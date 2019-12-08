@@ -16,7 +16,7 @@ void getnFibers();
     ------------
 
     Cria uma fiber(user-level thread) que executará a rotina(função)
-    start_routine.
+    start_routine recebendo o parâmetro arg.
 
 */
 int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg);
@@ -34,7 +34,9 @@ int fiber_join(fiber_t fiber, void **retval);
     fiber_exit
     ----------
 
-    Para a execução da thread atual.
+    Para a execução da fiber atual e altera seu status para FINISHED.
+    Com seu status FINISHED, essa fiber nunca mais será executada.
+    Logo após isso, o escalonador é chamado.
 
 */
 void fiber_exit(void *retval);
