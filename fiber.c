@@ -563,6 +563,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     fiberNode->next = NULL;
     fiberNode->status = READY;
     fiberNode->retval = NULL;
+    fiberNode->join_retval = NULL;
     fiberNode->joinFiber = NULL;
     fiberNode->waitingList = NULL;
 
