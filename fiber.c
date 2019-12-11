@@ -391,10 +391,8 @@ void startFibers() {
     timer.it_interval.tv_sec = SECONDS;
     timer.it_interval.tv_usec = MICSECONDS;
 
-    if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
-    	perror("Ocorreu um erro no sititimer da startFibers");
-    	return;
-    }
+    //começando o timer
+    restoreTimer(&timer);
 }
 
 /*
