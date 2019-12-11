@@ -1,4 +1,4 @@
-typedef unsigned int fiber_t; // tipo para ID de fibers
+typedef int fiber_t; // tipo para ID de fibers
 
 // Erros das funções
 #define ERR_EXISTS   11
