@@ -1,6 +1,27 @@
-/*  
-    Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level 
-    para 1 thread kernel-level) com escalonamento preemptivo utilizando o algoritmo round-robin.
+/*
+                                       
+    _____________  _____  ______________    ______________   ______________      _____              _____  _______________
+    |\\//\\//\\||  |\\||  |//\\//\\//\\/\   |\\//\\//\\//||  |//\\//\\//\\/\     |\\||              |\\||  |\\//\\//\\//\\\    
+    |//||          |//||  |\\|        \\/\  |//\\//\\//\\||  |\\|        \\/\    |//||              |//||  |//|         \/\\
+    |\\||          _____  |//|        |/\|  |\\|___________  |//|        |/\|    |\\||              _____  |\\|         |\/|
+    |//||________  |//||  |\\|________/\//  |//\\//\\//\\||  |\\|________/\//    |//||              |//||  |//|_________//\/
+    |\\//\\//\\||  |\\||  |//\\//\\//\\//|  |\\//\\//\\//||  |//\\//\\//\\//     |\\||              |\\||  |\\//\\//\\//\\/|
+    |//||          |//||  |\\|        \\\\  |//\\//\\//\\||  |\\|       \/\\     |//||              |//||  |//|         \//\
+    |\\||          |\\||  |//|        |//|  |\\|___________  |//|        \//\    |//||____________  |\\||  |\\|         |\/|
+    |//||          |//||  |\\|________/\\/  |//\\//\\//\\||  |\\|         \\/\   |//\\//\\//\\//||  |//||  |//|_________//\/                  
+    |\\||          |\\||  |//\\//\\//\\//   |\\//\\//\\//||  |//|          \\/\  |\\//\\//\\//\\||  |\\||  |\\//\\//\\///\/
+    ´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´                                                                           
+
+    FiberLib
+    --------
+
+    Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level para 1 
+    thread kernel-level) com escalonamento preemptivo utilizando o algoritmo round-robin.
+
+    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibersc é de 
+    TOTAL RESPONSABILIDADE DOS USUÁRIOS DA BIBLIOTECA. Além disso, as rotinas aqui implementadas
+    NÃO EVITAM que recursos possam ser compartilhados por múltiplas fibers ao mesmo tempo, nem 
+    mesmo evitam que o processo se bloqueie devido a joins encadeados.
 
     by Guilherme Bartasson, Diego Batistuta e Vitor Teixeira, 2019
 */
