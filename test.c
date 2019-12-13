@@ -102,7 +102,6 @@ void *threadFunction10(void * c) {
     fiber_exit(retval);
 }
 
-
 int main () {
 
     void * arg = NULL;

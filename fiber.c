@@ -360,16 +360,6 @@ Fiber * fiber_destroy(Fiber * fiber){
 }
 
 /*
-    getnFibers
-    ----------
-
-    Retorna a quantidade de fibers presentes na lista.
-*/
-void getnFibers() {
-    printf("%d\n", f_list->nFibers);
-}
-
-/*
     fiberScheduler
     --------------
 
