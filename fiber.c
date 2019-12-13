@@ -439,20 +439,25 @@ void fiberScheduler() {
 
     Função responsável por inicializar as estruturas do timer e 
     sinalizador, e a cada SECONDS segundos e MICSECONDS microssegundos,
-    um sinal é enviado para o processo cujo tratador é o escalonador
-    das fibers.
+    um sinal é enviado para o processo cujo tratador é o a rotina
+    timeHandler(), que chama o escalonador de fibers.
 
 */
 void startFibers() {
+    // Criando e inicializando a struct do sigaction
     struct sigaction sa;
-
     memset (&sa, 0, sizeof (sa));
+
+    // Atribuindo a rotina timeHandler() como tratador do sinal
     sa.sa_handler = &timeHandler;
+
+    // Chamada de sistema para configurar o tratador do sinal SIGVTALRM no processo
     if(sigaction (SIGVTALRM, &sa, NULL) == -1){
     	perror("Ocorreu um erro no sigaction da startFibers");
     	return;
     }
- 
+    
+    // Inicializando o timer e seus intervalos
     timer.it_value.tv_sec = SECONDS;
     timer.it_value.tv_usec = MICSECONDS;
  
@@ -481,6 +486,7 @@ int initFiberList() {
         perror("erro malloc na criação da lista na initFiberList");
         return ERR_MALL;
     }
+    // Inicializando a lista de fibers
     f_list->fibers = NULL;
     f_list->nFibers = 0;
     f_list->currentFiber = NULL;
@@ -707,6 +713,7 @@ int fiber_join(fiber_t fiber, void **retval){
         return ERR_MALL;
     }
 
+    // Atribuindo o id do nodo e inicializando seu ponteiro next
     waitingNode->waitingId = fiber;
     waitingNode->next = NULL;
 
@@ -741,8 +748,11 @@ int fiber_join(fiber_t fiber, void **retval){
     // as rotinas de destruição já distribuíram os valores de retval corretamente
     // para os atributos join_retval das fibers que estavam aguardando-a.
 	if(retval != NULL){
+        // Caso a joinFiber não tenha sido destruída ainda, o retval é recuperado diretamente dela
 		if(f_list->currentFiber->join_retval == NULL && f_list->currentFiber->joinFiber != NULL)
 			*retval = f_list->currentFiber->joinFiber->retval;
+        // Caso contrário, o retval é recuperado do atributo join_retval da própria fiber que chamou
+        // fiber_join()
 		else 
 			*retval = f_list->currentFiber->join_retval;
 		
@@ -753,6 +763,7 @@ int fiber_join(fiber_t fiber, void **retval){
 
     // Definindo o status da fiber atual como pronta para executar
     f_list->currentFiber->status = READY;
+
     return 0;
 }
 
