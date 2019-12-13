@@ -1,6 +1,6 @@
 /*
                                        
-    _____________  _____  ______________    ______________   _______________      _____              _____  _______________
+    _____________  _____  ______________    _______________  _______________      _____              _____  _______________
     |\\//\\//\\||  |\\||  |//\\//\\//\/\\   |\\//\\//\\//||  |//\\//\\//\\/\\     |\\||              |\\||  |\\//\\//\\//\\\    
     |//||          |//||  |\\||       \/\\  |//\\//\\//\\||  |\\||       \\/\\    |//||              |//||  |//||        \/\\
     |\\||          _____  |//||       |/||  |\\||            |//||       |/\||    |\\||              _____  |\\||        |\||
@@ -18,10 +18,10 @@
     Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level para 1 
     thread kernel-level) com escalonamento preemptivo utilizando o algoritmo round-robin.
 
-    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibersc é de 
+    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibers é de 
     TOTAL RESPONSABILIDADE DOS USUÁRIOS DA BIBLIOTECA. Além disso, as rotinas aqui implementadas
-    NÃO EVITAM que recursos possam ser compartilhados por múltiplas fibers ao mesmo tempo, nem 
-    mesmo evitam que o processo se bloqueie devido a joins encadeados.
+    NÃO EVITAM que recursos possam ser acessados por múltiplas fibers ao mesmo tempo, nem mesmo 
+    evitam que o processo se bloqueie devido a joins encadeados.
 
     by Guilherme Bartasson, Diego Batistuta e Vitor Teixeira, 2019
 */
@@ -154,14 +154,15 @@ typedef struct FiberList{
     int started;                // Indica se as fibers estão rodando
 }FiberList;
 
+// Lista global que armazenará as fibers
+FiberList * f_list = NULL;
+
 // Contexto para a função de escalonamento e da thread principal
 ucontext_t schedulerContext, parentContext;
 
 // Timer do escalonador
 struct itimerval timer;
 
-// Lista global que armazenará as fibers
-FiberList * f_list = NULL;
 
 /*
     timeHandler
@@ -602,9 +603,7 @@ int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg) {
     if(findFiber(* fiber) != NULL){
         printf("Essa fiber já existe\n");
         return ERR_EXISTS;
-    }
-
-    
+    }    
 
     // Alocando memória para a estrutura da fiber
     fiberNode = (Fiber *) malloc(sizeof(Fiber));

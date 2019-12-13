@@ -103,10 +103,6 @@ void *threadFunction10(void * c) {
 }
 
 
-
-
-
-
 int main () {
 
     void * arg = NULL;

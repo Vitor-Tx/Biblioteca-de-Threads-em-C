@@ -1,6 +1,6 @@
 /*
                                        
-    _____________  _____  ______________    ______________   _______________      _____              _____  _______________
+    _____________  _____  ______________    _______________  _______________      _____              _____  _______________
     |\\//\\//\\||  |\\||  |//\\//\\//\/\\   |\\//\\//\\//||  |//\\//\\//\\/\\     |\\||              |\\||  |\\//\\//\\//\\\    
     |//||          |//||  |\\||       \/\\  |//\\//\\//\\||  |\\||       \\/\\    |//||              |//||  |//||        \/\\
     |\\||          _____  |//||       |/||  |\\||            |//||       |/\||    |\\||              _____  |\\||        |\||
@@ -18,17 +18,13 @@
     Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level para 1 
     thread kernel-level) com escalonamento preemptivo utilizando o algoritmo round-robin.
 
-    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibersc é de 
+    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibers é de 
     TOTAL RESPONSABILIDADE DOS USUÁRIOS DA BIBLIOTECA. Além disso, as rotinas aqui implementadas
-    NÃO EVITAM que recursos possam ser compartilhados por múltiplas fibers ao mesmo tempo, nem 
+    NÃO EVITAM que recursos possam ser acessados por múltiplas fibers ao mesmo tempo, nem 
     mesmo evitam que o processo se bloqueie devido a joins encadeados.
 
     by Guilherme Bartasson, Diego Batistuta e Vitor Teixeira, 2019
 */
-
-// #ifndef fiber_h__
-// #define fiber_h__
-// #endif  // fiber h
 
 typedef int fiber_t; // tipo para ID de fibers
 
@@ -40,8 +36,6 @@ typedef int fiber_t; // tipo para ID de fibers
 #define ERR_NOTFOUND 55
 #define ERR_JOINCRRT 66
 #define ERR_NULLID   77
-
-void getnFibers();
 
 /*
     fiber_create
