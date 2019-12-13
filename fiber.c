@@ -191,13 +191,18 @@ void timeHandler(){
 
 */
 void stopTimer(struct itimerval * restored){
-    if(restored != NULL) // se restored for NULL, não é pra restaurar
+    // Se restored for NULL, não é pra restaurar. 
+    // Caso não seja, salva o tempo restante atual no ponteiro restored.
+    if(restored != NULL) 
         if (getitimer(ITIMER_VIRTUAL, restored) == -1) {
             perror("erro na getitimer() da stopTimer");
             exit(1);
         }
+    // Zerando segundos e microssegundos
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = 0;
+
+    // Parando o timer
     if(setitimer (ITIMER_VIRTUAL, &timer, NULL) == -1){
     	perror("Ocorreu um erro no setitimer() da stopTimer");
     	return;
@@ -277,15 +282,21 @@ Fiber * findFiber(fiber_t fiberId){
 void releaseFibers(Waiting *waitingList){
     // Enquanto houver fibers esperando
     while(waitingList != NULL){
-        Waiting * waitingNode = waitingList->next; // Recebe o próximo nodo da lista
-        Fiber * waitingFiber = findFiber(waitingList->waitingId); // Procura a fiber com o id do nodo atual da waitingList
+        // Recebe o próximo nodo da lista
+        Waiting * waitingNode = waitingList->next; 
+        // Procura a fiber com o id do nodo atual da waitingList
+        Fiber * waitingFiber = findFiber(waitingList->waitingId); 
         // Se a fiber existir e estiver esperando
         if(waitingFiber != NULL && waitingFiber->status == WAITING){
-            waitingFiber->status = READY;  // Libera a fiber
-            waitingFiber->join_retval = waitingFiber->joinFiber->retval; // Guarda o retval
+            // Libera a fiber
+            waitingFiber->status = READY;  
+            // Guarda o retval
+            waitingFiber->join_retval = waitingFiber->joinFiber->retval; 
         } 
-        free(waitingList); // Libera o nodo no topo
-        waitingList = (Waiting *) waitingNode; // Vai para o próximo nodo
+        // Libera o nodo no topo
+        free(waitingList); 
+        // Vai para o próximo nodo
+        waitingList = (Waiting *) waitingNode; 
     }
     
 }
@@ -464,7 +475,7 @@ void startFibers() {
     timer.it_interval.tv_sec = SECONDS;
     timer.it_interval.tv_usec = MICSECONDS;
 
-    //começando o timer
+    // Começando o timer
     restoreTimer(&timer);
 }
 
