@@ -28,7 +28,7 @@
     by Guilherme Bartasson, Diego Batistuta e Vitor Teixeira, 2019
 
 
-<h1>Descrição<h1>
+<h1>Descrição</h1>
   
 <p>Este grupo foi responsável por projetar e programar rotinas de criação e gerenciamento de threads em user-space, comumente referidas como “fibers”, que fazem parte de uma biblioteca denominada FiberLib. A FiberLib possui estruturas e rotinas que permitem a criação de threads em user level, seguindo o modelo de M threads no user level mapeadas para uma thread no kernel level (M:1), num escalonamento preemptivo baseado em time-slice, utilizando o algoritmo round-robin. A criação, escalonamento e armazenamento de contexto das threads foi feita utilizando system calls de manipulação de contextos, sendo elas: getcontext(), setcontext(), makecontext() e swapcontext(), além de system calls de manipulação de timers e sinais, sendo elas: setitimer(), getitimer() e sigaction().</p>
 <p>Essa biblioteca foi implementada com base em várias bibliotecas com o mesmo intuito(implementação de threads) e nos conhecimentos prévios de estruturas de dados dos integrantes do grupo. Apesar de isso ter exigido bastante esforço e dedicação, o resultado foi eficiente e satisfatório até onde pôde ser analisado, no que se refere aos requisitos do trabalho. A FiberLib foi criada em formato de shared library e pode ser utilizada, de forma amadora, em programas que necessitem de multi-threading simples. Pelo fato de ela não possuir nenhuma estrutura para semáforos e outras formas de evitar bloqueios do processo e acesso de áreas críticas por múltiplas threads, evitar que problemas relacionados a isso aconteçam é de total responsabilidade de seus usuários.</p>   
