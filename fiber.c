@@ -9,8 +9,8 @@
     |//\\//\\//\\||  |//||  |\\//\\//\\//\||  |//\\//\\//\\||  |\\//\\//\\/\/\      |//||              |//||  |\\//\\//\\//\||
     |\\||            |\\||  |\\||       \/\\  |\\||            |//||      \/\\\     |\\||              |\\||  |\\||       \/\\
     |//||            |//||  |//||       |\||  |//||__________  |\\||       \//\\    |//||____________  |//||  |//||       |\||
-    |\\||            |\\||  |\\||_______/\//  |\\//\\//\\//||  |//||        \\/\\   |//\\//\\//\\//||  |\\||  |\\||_______/\//                 
-    |//||            |//||  |//\\//\\//\\//   |//\\//\\//\\||  |\\||         \\/\\  |\\//\\//\\//\\||  |//||  |//\\//\\//\\//
+    |\\||            |\\||  |\\||_______/\//  |\\//\\//\\//||  |//||        \\/\\   |\\//\\//\\//\\||  |\\||  |\\||_______/\//                 
+    |//||            |//||  |//\\//\\//\\//   |//\\//\\//\\||  |\\||         \\/\\  |//\\//\\//\\//||  |//||  |//\\//\\//\\//
     ´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´      
     ´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´                                                                  
 
@@ -337,9 +337,10 @@ Fiber * fiber_destroy(Fiber * fiber){
 		prevFiber->next = (Fiber *) nextFiber;
 	}    
 
-    // Se a thread principal for destruída
-	if(id == PARENT_ID)
+    // Se a fiber na cabeça da lista for destruída
+	if(id == f_list->fibers->fiberId)
 		f_list->fibers = nextFiber; // Instanciar corretamente a cabeça da lista como a próxima fiber
+    
 	
     // Destruindo a fiber
     free(fiber->context.uc_stack.ss_sp);
@@ -709,8 +710,11 @@ int fiber_join(fiber_t fiber, void **retval){
         return ERR_JOINCRRT;
 
     // Se a fiber que deveria terminar antes já terminou
-    if(fiberNode->status == FINISHED) 
+    if(fiberNode->status == FINISHED){
+        releaseFibers(fiberNode->waitingList);
         return 0;
+    } 
+        
 
 	// Criando um nodo para a lista de espera da fiber que será aguardada
     Waiting * waitingNode = (Waiting *) malloc(sizeof(Waiting));
