@@ -1,45 +1,36 @@
-# TrabalhodeSO
-Trabalho da disciplina Sistemas Operacionais do curso de Sistemas de Informação da UFU
 
-As características da biblioteca FiberLib seguem:
-<ul>
-  <li>A FiberLib deve implementar toda a infraestrutura para a criação de threads no user-space, seguindo o modelo M:1, ou seja, M threads no user space mapeadas para uma thread no kernel space.</li>
-  <li>A FiberLib deve implementar escalonamento preemptivo, baseado em time slice (algoritmo roundrobin).</li>
-  <li>O código do alocador deve estar no formato de shared library no Linux.</li>
-</ul>
+                                       
+    _______________  _____  ______________    _______________  _______________      _____              _____  ______________
+    |\\//\\//\\//||  |\\||  |//\\//\\//\/\\   |\\//\\//\\//||  |//\\//\\//\\/\\     |\\||              |\\||  |//\\//\\//\/\\     
+    |//\\//\\//\\||  |//||  |\\||       \/\\  |//\\//\\//\\||  |\\||       \\/\\    |//||              |//||  |\\||       \/\\
+    |\\||            _____  |//||       |/||  |\\||            |//||       |/\||    |\\||              _____  |//||       |/||
+    |//||__________  |//||  |\\||_______/\//  |//||__________  |\\||_______/\///    |//||              |//||  |\\||_______/\//
+    |\\//\\//\\//||  |\\||  |//\\//\\//\\/||  |\\//\\//\\//||  |//\\//\\//\\///     |\\||              |\\||  |//\\//\\//\\/||
+    |//\\//\\//\\||  |//||  |\\//\\//\\//\||  |//\\//\\//\\||  |\\//\\//\\/\/\      |//||              |//||  |\\//\\//\\//\||
+    |\\||            |\\||  |\\||       \/\\  |\\||            |//||      \/\\\     |\\||              |\\||  |\\||       \/\\
+    |//||            |//||  |//||       |\||  |//||__________  |\\||       \//\\    |//||____________  |//||  |//||       |\||
+    |\\||            |\\||  |\\||_______/\//  |\\//\\//\\//||  |//||        \\/\\   |//\\//\\//\\//||  |\\||  |\\||_______/\//          
+    |//||            |//||  |//\\//\\//\\//   |//\\//\\//\\||  |\\||         \\/\\  |\\//\\//\\//\\||  |//||  |//\\//\\//\\//
+    ´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´      
+    ´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´                                                                  
 
-<h3>Tal como a biblioteca pthread, a FiberLib deve oferecer a seguinte interface mínima:</h3>
+    FiberLib
+    --------
 
-<ul>
-  <li>Arquivo <fiber.h> contendo todos símbolos necessários ao uso das rotinas da biblioteca.</li>
-</ul>
+    Implementação de threads em user-level(fibers) no modelo M para 1(M threads user-level para 1 
+    thread kernel-level) com escalonamento preemptivo utilizando o algoritmo round-robin.
 
-<h3>Rotinas:</h3>
+    A alocação de memória para ponteiros que guardam e recebem valores de retorno de fibers é de 
+    TOTAL RESPONSABILIDADE DOS USUÁRIOS DA BIBLIOTECA. Além disso, as rotinas aqui implementadas
+    NÃO EVITAM que recursos possam ser acessados por múltiplas fibers ao mesmo tempo, nem mesmo 
+    evitam que o processo se bloqueie devido a joins encadeados.
 
-<ul>
-  <li>int fiber_create(fiber_t *fiber, void *(*start_routine) (void *), void *arg);</li>
-  <li>int fiber_join(fiber_t fiber, void **retval);</li>
-  <li>int fiber_destroy(fiber_t fiber);</li>
-  <li>void fiber_exit(void *retval);</li>
-</ul>
+    by Guilherme Bartasson, Diego Batistuta e Vitor Teixeira, 2019
 
-A semântica dessas rotinas segue aquela definida para as rotinas equivalentes da biblioteca pthread (vide
-man pages).
 
-Para implementar as rotinas supracitadas, bem como outras acessórias, será necessário o uso de várias
-system calls, em especial: <strong>getcontext()</strong>, <strong>setcontext()</strong>, <strong>makecontext()</strong>, <strong>swapcontext()</strong>, <strong>sigaction()</strong> e
-<strong>alarm()</strong>. Consulte o manual online do Linux (man pages), bem como fontes complementares, para o
-entendimento de cada uma dessas funções.
-
-## Links Úteis
-<ul>
-  <li><strong><span>Artigo sobre a implementação de fibers: </span></strong>https://www.evanjones.ca/software/threading.html</li>
-  <li><strong><span>getcontext() e setcontext(): </span></strong>http://man7.org/linux/man-pages/man3/setcontext.3.html</li>
-  <li><strong><span>makecontext(): </span></strong>http://man7.org/linux/man-pages/man3/makecontext.3.html</li>
-  <li><strong><span>swapcontext(): </span></strong>http://man7.org/linux/man-pages/man3/swapcontext.3.html</li>
-  <li><strong><span>sigaction(): </span></strong>http://man7.org/linux/man-pages/man2/sigaction.2.html</li>
-  <li><strong><span>alarm(): </span></strong>http://man7.org/linux/man-pages/man2/alarm.2.html</li>
-  <li><strong><span>setitimer(): </span></strong>https://www.unix.com/man-page/linux/2/setitimer/</li>
-  <li><strong><span>sigprocmask() (relacionada ao atributo uc_sigmask da estrutura ucontext_t ao chamar makecontext()): </span></strong>http://man7.org/linux/man-pages/man2/sigprocmask.2.html</li>
-  <li><strong><span>sigaltstack() (relacionada ao atributo uc_stack da estrutura ucontext_t ao chamar makecontext()): </span></strong>http://man7.org/linux/man-pages/man2/sigaltstack.2.html</li>
-</ul>
+<h1>Descrição</h1>
+  
+<p>Este grupo foi responsável por projetar e programar rotinas de criação e gerenciamento de threads em user-space, comumente referidas como “fibers”, que fazem parte de uma biblioteca denominada FiberLib. A FiberLib possui estruturas e rotinas que permitem a criação de threads em user level, seguindo o modelo de M threads no user level mapeadas para uma thread no kernel level (M:1), num escalonamento preemptivo baseado em time-slice, utilizando o algoritmo round-robin. A criação, escalonamento e armazenamento de contexto das threads foi feita utilizando system calls de manipulação de contextos, sendo elas: getcontext(), setcontext(), makecontext() e swapcontext(), além de system calls de manipulação de timers e sinais, sendo elas: setitimer(), getitimer() e sigaction().</p>
+<p>Essa biblioteca foi implementada com base em várias bibliotecas com o mesmo intuito(implementação de threads) e nos conhecimentos prévios de estruturas de dados dos integrantes do grupo. Apesar de isso ter exigido bastante esforço e dedicação, o resultado foi eficiente e satisfatório até onde pôde ser analisado, no que se refere aos requisitos do trabalho. A FiberLib foi criada em formato de shared library e pode ser utilizada, de forma amadora, em programas que necessitem de multi-threading simples. Pelo fato de ela não possuir nenhuma estrutura para semáforos e outras formas de evitar bloqueios do processo e acesso de áreas críticas por múltiplas threads, evitar que problemas relacionados a isso aconteçam é de total responsabilidade de seus usuários.</p>   
+<p>As rotinas fiber_create(), fiber_exit() e fiber_join()  foram implementadas com base na funcionalidade das rotinas equivalentes da biblioteca pthread, sendo elas, respectivamente: pthread_create(), pthread_exit() e pthread_join(). Há um  arquivo de cabeçalho “fiber.h” que possui os símbolos necessários para o uso das rotinas da biblioteca e um arquivo “fiber.c” com os códigos das rotinas e declarações das estruturas e variáveis globais utilizadas por elas.</p>
+<p>Pelo fato de o escalonamento ser baseado no algoritmo round-robin, uma maneira intuitiva e simples de implementá-lo é por meio de uma lista circular, e por isso a FiberLib armazena as fibers em uma lista desse tipo, com sua cauda apontando para a cabeça, assim simplificando o trabalho do escalonador.</p>
